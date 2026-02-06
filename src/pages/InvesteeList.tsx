@@ -89,7 +89,7 @@ export default function InvesteeList() {
     }
     
     if (status.hasReport) {
-      return <Badge variant="default" className="bg-chart-secondary text-white">제출완료</Badge>;
+      return <Badge variant="default">제출완료</Badge>;
     }
     
     if (status.hasPendingRequest) {
