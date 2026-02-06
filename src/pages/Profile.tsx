@@ -26,10 +26,6 @@ export default function Profile() {
               <span className="font-medium">GDP Studio Inc.</span>
             </div>
             <div className="flex justify-between border-b border-border pb-4">
-              <span className="text-muted-foreground">직책</span>
-              <span className="font-medium">투자 매니저</span>
-            </div>
-            <div className="flex justify-between border-b border-border pb-4">
               <span className="text-muted-foreground">가입일</span>
               <span className="font-medium">2024.01.15</span>
             </div>
