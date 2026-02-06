@@ -24,10 +24,11 @@ import {
   Tooltip,
 } from "recharts";
 import { useInvestee } from "@/hooks/useInvestees";
-import { useShareholderReports, useCreateReportRequest, useSendReportRequestEmail } from "@/hooks/useShareholderReports";
+import { useShareholderReports, useCreateReportRequest, useSendReportRequestEmail, type ShareholderReport } from "@/hooks/useShareholderReports";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { ReportDetailDialog } from "@/components/reports/ReportDetailDialog";
 
 function formatCurrency(amount: number | null): string {
   if (amount === null || amount === 0) return "정보 없음";
@@ -58,6 +59,13 @@ export default function CompanyDetail() {
   const sendReportEmail = useSendReportRequestEmail();
   const { toast } = useToast();
   const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<ShareholderReport | null>(null);
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+
+  const handleReportClick = (report: ShareholderReport) => {
+    setSelectedReport(report);
+    setIsReportDialogOpen(true);
+  };
 
   const handleRequestReport = async () => {
     if (!company || !company.contact_email) {
@@ -397,7 +405,11 @@ export default function CompanyDetail() {
             <TableBody>
               {reports.length > 0 ? (
                 reports.map((report) => (
-                  <TableRow key={report.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableRow 
+                    key={report.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleReportClick(report)}
+                  >
                     <TableCell className="pl-6 font-medium">{formatPeriod(report.report_period)}</TableCell>
                     <TableCell>{formatCurrency(report.monthly_revenue)}</TableCell>
                     <TableCell>{formatCurrency(report.cash_balance)}</TableCell>
@@ -416,6 +428,12 @@ export default function CompanyDetail() {
           </Table>
         </CardContent>
       </Card>
+
+      <ReportDetailDialog
+        report={selectedReport}
+        open={isReportDialogOpen}
+        onOpenChange={setIsReportDialogOpen}
+      />
     </DashboardLayout>
   );
 }
