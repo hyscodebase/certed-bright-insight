@@ -118,7 +118,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      accept_invitation: { Args: { p_invitation_token: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
