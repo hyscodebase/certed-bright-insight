@@ -1,54 +1,70 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 
-export default function Login() {
+export default function Signup() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-
-  // Get the intended destination or default to "/"
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/";
-
-  useEffect(() => {
-    // If user is already logged in, redirect to intended destination
-    if (!authLoading && user) {
-      navigate(from, { replace: true });
-    }
-  }, [user, authLoading, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (password !== confirmPassword) {
+      toast({
+        title: "비밀번호 불일치",
+        description: "비밀번호가 일치하지 않습니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "비밀번호 오류",
+        description: "비밀번호는 최소 6자 이상이어야 합니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
     });
 
     if (error) {
       toast({
-        title: "로그인 실패",
+        title: "회원가입 실패",
         description: error.message,
         variant: "destructive",
       });
+    } else {
+      toast({
+        title: "회원가입 성공",
+        description: "이메일을 확인하여 계정을 인증해주세요.",
+      });
+      navigate("/login");
     }
 
     setLoading(false);
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleSignup = async () => {
     setLoading(true);
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
@@ -56,7 +72,7 @@ export default function Login() {
 
     if (result.error) {
       toast({
-        title: "Google 로그인 실패",
+        title: "Google 회원가입 실패",
         description: result.error.message,
         variant: "destructive",
       });
@@ -76,16 +92,16 @@ export default function Login() {
             </h1>
           </div>
 
-          {/* Login Card */}
+          {/* Signup Card */}
           <div className="rounded-2xl bg-card p-8">
             <h2 className="mb-8 text-center text-2xl font-medium text-muted-foreground">
-              로그인
+              회원가입
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium">
-                  아이디 <span className="text-primary">*</span>
+                  이메일 <span className="text-primary">*</span>
                 </Label>
                 <Input
                   id="email"
@@ -93,6 +109,7 @@ export default function Login() {
                   placeholder="이메일 주소를 입력하세요"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
                   className="h-12 rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary"
                 />
               </div>
@@ -104,9 +121,25 @@ export default function Login() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="비밀번호를 입력하세요"
+                  placeholder="비밀번호를 입력하세요 (최소 6자)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-12 rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-sm font-medium">
+                  비밀번호 확인 <span className="text-primary">*</span>
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="비밀번호를 다시 입력하세요"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
                   className="h-12 rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary"
                 />
               </div>
@@ -116,7 +149,7 @@ export default function Login() {
                 disabled={loading}
                 className="h-12 w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                {loading ? "로그인 중..." : "로그인"}
+                {loading ? "가입 중..." : "회원가입"}
               </Button>
             </form>
 
@@ -127,11 +160,11 @@ export default function Login() {
               <div className="h-px flex-1 bg-border" />
             </div>
 
-            {/* Google Login Button */}
+            {/* Google Signup Button */}
             <Button
               type="button"
               variant="outline"
-              onClick={handleGoogleLogin}
+              onClick={handleGoogleSignup}
               disabled={loading}
               className="h-12 w-full rounded-lg border border-border bg-background hover:bg-secondary"
             >
@@ -158,14 +191,14 @@ export default function Login() {
 
             <div className="mt-6 text-center">
               <span className="text-sm text-muted-foreground">
-                써티드 플러스 회원이 아니신가요?{" "}
+                이미 계정이 있으신가요?{" "}
               </span>
               <Link
-                to="/signup"
+                to="/login"
                 className="inline-flex items-center gap-1 text-sm font-medium text-foreground hover:text-primary"
               >
-                회원가입
-                <ChevronRight className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" />
+                로그인
               </Link>
             </div>
           </div>
