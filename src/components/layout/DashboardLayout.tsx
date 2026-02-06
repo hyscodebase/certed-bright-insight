@@ -7,9 +7,9 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
-    <div className="min-h-screen bg-secondary/30">
+    <div className="flex min-h-screen bg-secondary/30">
       <AppSidebar />
-      <main className="ml-sidebar min-h-screen">
+      <main className="flex-1 ml-[250px] min-h-screen">
         <div className="p-8">
           {children}
         </div>
