@@ -111,10 +111,9 @@ const handler = async (req: Request): Promise<Response> => {
               </p>
               <p style="margin: 0; font-size: 11px; color: #aaaaaa; line-height: 1.5;">
                 Home : www.certifie.io &nbsp;&nbsp; E-Mail : help@certifie.io<br>
-                사업자 등록번호 : 146-87-02284 | 대표 : 이 유<br>
-                호스팅 서비스 : 주식회사 지디피스튜디오<br>
-                주소 : 서울특별시 금천구 가산디지털1로 120<br>
-                서울디지털산업단지 G밸리창업큐브 603 (08590)
+                상호명 : 주식회사 지디피스튜디오 | 대표자 : 이유<br>
+                사업자 등록번호 : 146-87-02284 | 전화번호 : 010-6212-0225<br>
+                주소 : 경기도 성남시 대왕판교로 625번길 13 경기창조혁신센터 8층
               </p>
             </td>
           </tr>
