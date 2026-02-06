@@ -45,14 +45,15 @@ export function useCreateReportRequest() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (investeeId: string) => {
+    mutationFn: async (params: { investeeId: string; reportPeriod: string }) => {
       const token = crypto.randomUUID();
 
       const { data, error } = await supabase
         .from("report_requests")
         .insert({
-          investee_id: investeeId,
+          investee_id: params.investeeId,
           request_token: token,
+          report_period: params.reportPeriod,
         })
         .select()
         .single();
@@ -60,8 +61,9 @@ export function useCreateReportRequest() {
       if (error) throw error;
       return data;
     },
-    onSuccess: (_, investeeId) => {
-      queryClient.invalidateQueries({ queryKey: ["report-requests", investeeId] });
+    onSuccess: (_, params) => {
+      queryClient.invalidateQueries({ queryKey: ["report-requests", params.investeeId] });
+      queryClient.invalidateQueries({ queryKey: ["report-status"] });
     },
     onError: (error: Error) => {
       toast({
@@ -81,6 +83,7 @@ export function useSendReportRequestEmail() {
       company_name: string;
       contact_email: string;
       request_token: string;
+      report_period: string;
     }) => {
       const response = await supabase.functions.invoke("send-report-request-email", {
         body: params,

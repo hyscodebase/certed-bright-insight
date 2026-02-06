@@ -61,6 +61,7 @@ export default function SubmitReport() {
 
   const [status, setStatus] = useState<"loading" | "valid" | "invalid" | "expired" | "completed" | "submitting" | "success">("loading");
   const [companyName, setCompanyName] = useState("");
+  const [reportPeriod, setReportPeriod] = useState("");
   const [formData, setFormData] = useState<ReportFormData>(initialFormData);
 
   useEffect(() => {
@@ -97,6 +98,15 @@ export default function SubmitReport() {
         }
 
         setCompanyName((data.investees as any)?.company_name || "");
+        
+        // Use the requested report period, fallback to current month if not set
+        if (data.report_period) {
+          setReportPeriod(data.report_period);
+        } else {
+          const now = new Date();
+          setReportPeriod(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+        }
+        
         setStatus("valid");
       } catch {
         setStatus("invalid");
@@ -138,9 +148,6 @@ export default function SubmitReport() {
     }
 
     setStatus("submitting");
-
-    const currentDate = new Date();
-    const reportPeriod = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}`;
 
     try {
       const { data, error } = await supabase.rpc("submit_shareholder_report", {
@@ -253,11 +260,16 @@ export default function SubmitReport() {
       <div className="mx-auto max-w-2xl">
         <Card className="animate-fade-in border-border shadow-sm">
           <CardHeader className="border-b">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg font-semibold">
-                {companyName} 주주보고서 작성
-              </CardTitle>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg font-semibold">
+                  {companyName} 주주보고서 작성
+                </CardTitle>
+              </div>
+              <span className="rounded-md bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                {reportPeriod.split("-")[0]}년 {parseInt(reportPeriod.split("-")[1])}월
+              </span>
             </div>
           </CardHeader>
           <CardContent className="p-6">

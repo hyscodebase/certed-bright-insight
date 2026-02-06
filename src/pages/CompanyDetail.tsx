@@ -29,6 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ReportDetailDialog } from "@/components/reports/ReportDetailDialog";
+import { ReportRequestDialog } from "@/components/reports/ReportRequestDialog";
 
 function formatCurrency(amount: number | null): string {
   if (amount === null || amount === 0) return "정보 없음";
@@ -61,13 +62,14 @@ export default function CompanyDetail() {
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ShareholderReport | null>(null);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
 
   const handleReportClick = (report: ShareholderReport) => {
     setSelectedReport(report);
     setIsReportDialogOpen(true);
   };
 
-  const handleRequestReport = async () => {
+  const handleOpenRequestDialog = () => {
     if (!company || !company.contact_email) {
       toast({
         title: "이메일 주소 없음",
@@ -76,16 +78,26 @@ export default function CompanyDetail() {
       });
       return;
     }
+    setIsRequestDialogOpen(true);
+  };
+
+  const handleRequestReport = async (reportPeriod: string) => {
+    if (!company || !company.contact_email) return;
 
     setIsSendingRequest(true);
 
     try {
-      const request = await createReportRequest.mutateAsync(company.id);
+      const request = await createReportRequest.mutateAsync({
+        investeeId: company.id,
+        reportPeriod,
+      });
       await sendReportEmail.mutateAsync({
         company_name: company.company_name,
         contact_email: company.contact_email,
         request_token: request.request_token,
+        report_period: reportPeriod,
       });
+      setIsRequestDialogOpen(false);
     } catch (error) {
       // Error handling is done in the hooks
     } finally {
@@ -158,21 +170,11 @@ export default function CompanyDetail() {
       <div className="mb-4 flex items-center justify-between">
         <PageHeader title="기업상세 정보" showBack />
         <Button
-          onClick={handleRequestReport}
-          disabled={isSendingRequest}
+          onClick={handleOpenRequestDialog}
           className="gap-2"
         >
-          {isSendingRequest ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              발송 중...
-            </>
-          ) : (
-            <>
-              <Send className="h-4 w-4" />
-              주주보고서 작성 요청
-            </>
-          )}
+          <Send className="h-4 w-4" />
+          주주보고서 작성 요청
         </Button>
       </div>
 
@@ -434,6 +436,14 @@ export default function CompanyDetail() {
         company={company}
         open={isReportDialogOpen}
         onOpenChange={setIsReportDialogOpen}
+      />
+
+      <ReportRequestDialog
+        open={isRequestDialogOpen}
+        onOpenChange={setIsRequestDialogOpen}
+        companyName={company.company_name}
+        onConfirm={handleRequestReport}
+        isLoading={isSendingRequest}
       />
     </DashboardLayout>
   );

@@ -48,12 +48,20 @@ export default function InvesteeList() {
 
     setSendingId(investeeId);
 
+    // Default to current month
+    const now = new Date();
+    const reportPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
     try {
-      const request = await createReportRequest.mutateAsync(investeeId);
+      const request = await createReportRequest.mutateAsync({
+        investeeId,
+        reportPeriod,
+      });
       await sendReportEmail.mutateAsync({
         company_name: companyName,
         contact_email: contactEmail,
         request_token: request.request_token,
+        report_period: reportPeriod,
       });
     } catch (error) {
       // Error handling is done in the hooks
