@@ -57,8 +57,8 @@ const handler = async (req: Request): Promise<Response> => {
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
           <tr>
             <td style="background-color: #3B5BDB; padding: 24px 32px;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">Certed</h1>
-              <p style="margin: 4px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Request for cooperation</p>
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">Certed+</h1>
+              <p style="margin: 4px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">투자 포트폴리오 관리 플랫폼</p>
             </td>
           </tr>
           <tr>
@@ -71,22 +71,22 @@ const handler = async (req: Request): Promise<Response> => {
               <h2 style="margin: 0 0 8px 0; font-size: 18px; color: #1a1a1a;">
                 <span style="font-weight: 400;">${company_name}</span> 담당자님,
               </h2>
-              <p style="margin: 0 0 4px 0; font-size: 16px; color: #3B5BDB; font-weight: 600;">빅베이슨 캐피털</p>
-              <p style="margin: 0 0 24px 0; font-size: 16px; color: #1a1a1a;">과 써티드 연동을 진행해주세요.</p>
+              <p style="margin: 0 0 4px 0; font-size: 16px; color: #3B5BDB; font-weight: 600;">Certed+ 연동 요청</p>
+              <p style="margin: 0 0 24px 0; font-size: 16px; color: #1a1a1a;">이 있습니다.</p>
               <p style="margin: 0 0 16px 0; font-size: 14px; color: #4a4a4a; line-height: 1.6;">
                 안녕하세요. ${company_name} 담당자님,<br>
-                투자사 빅베이슨 캐피털의 써티드 연동 요청이 있습니다.<br>
-                써티드는 경력증명서 및 각종 HR 문서 작성 서비스로써<br>
-                투자사와 피투자사 간의 주주보고서 공유 기능도 제공하고 있습니다.<br>
-                써티드에 회원가입을 하시면 빅베이슨 캐피털과 연동되어<br>
-                편리하게 주주보고서를 연동 시킬 수 있습니다.
+                투자사로부터 Certed+ 연동 요청이 있습니다.<br>
+                Certed+는 투자사와 피투자사 간의 주주 보고서 관리를 위한<br>
+                스마트 플랫폼입니다.<br><br>
+                Certed+에 회원가입을 하시면 투자사와 연동되어<br>
+                편리하게 주주보고서를 공유할 수 있습니다.
               </p>
               <p style="margin: 0 0 8px 0; font-size: 14px; color: #4a4a4a; line-height: 1.6;">
-                아래 '<span style="color: #3B5BDB; font-weight: 500;">써티드 투자사 연동하기</span>' 버튼을 클릭하여 빅베이슨 캐피털 과<br>
-                써티드 연동을 진행하여 주시기 바랍니다.
+                아래 '<span style="color: #3B5BDB; font-weight: 500;">투자사 연동하기</span>' 버튼을 클릭하여<br>
+                Certed+ 연동을 진행하여 주시기 바랍니다.
               </p>
               <p style="margin: 0 0 32px 0; font-size: 12px; color: #888888;">
-                ※ 약관은 본 메일의 첨부파일로 첨부되어있습니다.
+                ※ 이 링크는 7일 후에 만료됩니다.
               </p>
             </td>
           </tr>
@@ -96,7 +96,7 @@ const handler = async (req: Request): Promise<Response> => {
                 <tr>
                   <td style="border-top: 1px solid #e5e5e5; padding-top: 24px;" align="center">
                     <a href="${acceptUrl}" style="display: inline-block; background-color: #3B5BDB; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 15px; font-weight: 600;">
-                      써티드 투자사 연동하기
+                      투자사 연동하기
                     </a>
                   </td>
                 </tr>
@@ -110,11 +110,9 @@ const handler = async (req: Request): Promise<Response> => {
                 <a href="#" style="color: #888888; text-decoration: none;">서비스 약관</a>
               </p>
               <p style="margin: 0; font-size: 11px; color: #aaaaaa; line-height: 1.5;">
-                Home : www.certifie.io &nbsp;&nbsp; E-Mail : help@certifie.io<br>
-                사업자 등록번호 : 146-87-02284 | 대표 : 이 유<br>
-                호스팅 서비스 : 주식회사 지디피스튜디오<br>
-                주소 : 서울특별시 금천구 가산디지털1로 120<br>
-                서울디지털산업단지 G밸리창업큐브 603 (08590)
+                Home : goodgood.lovable.app &nbsp;&nbsp; E-Mail : help@gdpstudio.io<br>
+                호스팅 서비스 : GDP Studio Inc.<br>
+                © 2026 Certed+. All rights reserved.
               </p>
             </td>
           </tr>
@@ -128,7 +126,7 @@ const handler = async (req: Request): Promise<Response> => {
     await transporter.sendMail({
       from: gmailUser,
       to: contact_email,
-      subject: `[빅베이슨 캐피털] ${company_name}님, 써티드 투자사 연동 요청`,
+      subject: `[Certed+] ${company_name}님, 투자사 연동 요청`,
       html: emailHtml,
     });
 
