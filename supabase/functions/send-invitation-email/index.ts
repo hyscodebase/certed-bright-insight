@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
@@ -33,8 +32,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Gmail credentials not configured");
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const acceptUrl = `${supabaseUrl?.replace('.supabase.co', '-preview--6c10bdd3-7162-4f71-81bb-4d1a1b7ea2c4.lovable.app') || 'https://goodgood.lovable.app'}/accept-invitation?token=${invitation_token}`;
+    const acceptUrl = `https://goodgood.lovable.app/accept-invitation?token=${invitation_token}`;
 
     const client = new SMTPClient({
       connection: {
@@ -48,8 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
       },
     });
 
-    const emailHtml = `
-<!DOCTYPE html>
+    const emailHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -60,22 +57,17 @@ const handler = async (req: Request): Promise<Response> => {
     <tr>
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-          <!-- Header -->
           <tr>
             <td style="background-color: #3B5BDB; padding: 24px 32px;">
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">Certed</h1>
               <p style="margin: 4px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Request for cooperation</p>
             </td>
           </tr>
-          
-          <!-- Divider -->
           <tr>
             <td style="padding: 0 32px;">
               <div style="height: 4px; background: linear-gradient(90deg, #3B5BDB 0%, #748FFC 100%); margin-top: 0;"></div>
             </td>
           </tr>
-          
-          <!-- Content -->
           <tr>
             <td style="padding: 32px;">
               <h2 style="margin: 0 0 8px 0; font-size: 18px; color: #1a1a1a;">
@@ -83,7 +75,6 @@ const handler = async (req: Request): Promise<Response> => {
               </h2>
               <p style="margin: 0 0 4px 0; font-size: 16px; color: #3B5BDB; font-weight: 600;">빅베이슨 캐피털</p>
               <p style="margin: 0 0 24px 0; font-size: 16px; color: #1a1a1a;">과 써티드 연동을 진행해주세요.</p>
-              
               <p style="margin: 0 0 16px 0; font-size: 14px; color: #4a4a4a; line-height: 1.6;">
                 안녕하세요. ${company_name} 담당자님,<br>
                 투자사 빅베이슨 캐피털의 써티드 연동 요청이 있습니다.<br>
@@ -92,19 +83,15 @@ const handler = async (req: Request): Promise<Response> => {
                 써티드에 회원가입을 하시면 빅베이슨 캐피털과 연동되어<br>
                 편리하게 주주보고서를 연동 시킬 수 있습니다.
               </p>
-              
               <p style="margin: 0 0 8px 0; font-size: 14px; color: #4a4a4a; line-height: 1.6;">
                 아래 '<span style="color: #3B5BDB; font-weight: 500;">써티드 투자사 연동하기</span>' 버튼을 클릭하여 빅베이슨 캐피털 과<br>
                 써티드 연동을 진행하여 주시기 바랍니다.
               </p>
-              
               <p style="margin: 0 0 32px 0; font-size: 12px; color: #888888;">
                 ※ 약관은 본 메일의 첨부파일로 첨부되어있습니다.
               </p>
             </td>
           </tr>
-          
-          <!-- Button -->
           <tr>
             <td style="padding: 0 32px 32px 32px;">
               <table width="100%" cellpadding="0" cellspacing="0">
@@ -118,8 +105,6 @@ const handler = async (req: Request): Promise<Response> => {
               </table>
             </td>
           </tr>
-          
-          <!-- Footer -->
           <tr>
             <td style="padding: 24px 32px; border-top: 1px solid #e5e5e5;">
               <p style="margin: 0 0 8px 0; font-size: 12px; color: #888888;">
@@ -140,15 +125,20 @@ const handler = async (req: Request): Promise<Response> => {
     </tr>
   </table>
 </body>
-</html>
-    `;
+</html>`;
 
     await client.send({
       from: gmailUser,
       to: contact_email,
       subject: `[빅베이슨 캐피털] ${company_name}님, 써티드 투자사 연동 요청`,
-      content: "auto",
       html: emailHtml,
+      mimeContent: [
+        {
+          mimeType: "text/html; charset=UTF-8",
+          content: emailHtml,
+          transferEncoding: "base64",
+        },
+      ],
     });
 
     await client.close();
