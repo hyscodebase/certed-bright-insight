@@ -1,0 +1,502 @@
+import { useState, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { FileText, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+
+interface ReportFormData {
+  // Required fields
+  monthly_summary: string;
+  problems_risks: string;
+  next_month_decisions: string;
+  shareholder_input_needed: string;
+  monthly_revenue: string;
+  cumulative_revenue: string;
+  fixed_costs: string;
+  variable_costs: string;
+  cash_balance: string;
+  runway_months: string;
+  employee_count_change: string;
+  // Optional fields
+  contract_count: string;
+  paid_customer_count: string;
+  average_contract_value: string;
+  mau: string;
+  dau: string;
+  conversion_rate: string;
+  cac: string;
+}
+
+const initialFormData: ReportFormData = {
+  monthly_summary: "",
+  problems_risks: "",
+  next_month_decisions: "",
+  shareholder_input_needed: "",
+  monthly_revenue: "",
+  cumulative_revenue: "",
+  fixed_costs: "",
+  variable_costs: "",
+  cash_balance: "",
+  runway_months: "",
+  employee_count_change: "",
+  contract_count: "",
+  paid_customer_count: "",
+  average_contract_value: "",
+  mau: "",
+  dau: "",
+  conversion_rate: "",
+  cac: "",
+};
+
+export default function SubmitReport() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const token = searchParams.get("token");
+  const { toast } = useToast();
+
+  const [status, setStatus] = useState<"loading" | "valid" | "invalid" | "expired" | "completed" | "submitting" | "success">("loading");
+  const [companyName, setCompanyName] = useState("");
+  const [formData, setFormData] = useState<ReportFormData>(initialFormData);
+
+  useEffect(() => {
+    async function validateToken() {
+      if (!token) {
+        setStatus("invalid");
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("report_requests")
+          .select(`
+            *,
+            investees (company_name)
+          `)
+          .eq("request_token", token)
+          .maybeSingle();
+
+        if (error || !data) {
+          setStatus("invalid");
+          return;
+        }
+
+        if (data.status === "completed") {
+          setStatus("completed");
+          setCompanyName((data.investees as any)?.company_name || "");
+          return;
+        }
+
+        if (new Date(data.expires_at) < new Date()) {
+          setStatus("expired");
+          return;
+        }
+
+        setCompanyName((data.investees as any)?.company_name || "");
+        setStatus("valid");
+      } catch {
+        setStatus("invalid");
+      }
+    }
+
+    validateToken();
+  }, [token]);
+
+  const handleInputChange = (field: keyof ReportFormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const isRequiredFieldsFilled = () => {
+    return (
+      formData.monthly_summary.trim() &&
+      formData.problems_risks.trim() &&
+      formData.next_month_decisions.trim() &&
+      formData.shareholder_input_needed.trim() &&
+      formData.monthly_revenue &&
+      formData.cumulative_revenue &&
+      formData.fixed_costs &&
+      formData.variable_costs &&
+      formData.cash_balance &&
+      formData.runway_months &&
+      formData.employee_count_change
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!isRequiredFieldsFilled()) {
+      toast({
+        title: "필수 항목을 모두 입력해주세요",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setStatus("submitting");
+
+    const currentDate = new Date();
+    const reportPeriod = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}`;
+
+    try {
+      const { data, error } = await supabase.rpc("submit_shareholder_report", {
+        p_request_token: token!,
+        p_report_period: reportPeriod,
+        p_monthly_summary: formData.monthly_summary,
+        p_problems_risks: formData.problems_risks,
+        p_next_month_decisions: formData.next_month_decisions,
+        p_shareholder_input_needed: formData.shareholder_input_needed,
+        p_monthly_revenue: parseInt(formData.monthly_revenue) || 0,
+        p_cumulative_revenue: parseInt(formData.cumulative_revenue) || 0,
+        p_fixed_costs: parseInt(formData.fixed_costs) || 0,
+        p_variable_costs: parseInt(formData.variable_costs) || 0,
+        p_cash_balance: parseInt(formData.cash_balance) || 0,
+        p_runway_months: parseInt(formData.runway_months) || 0,
+        p_employee_count_change: parseInt(formData.employee_count_change) || 0,
+        p_contract_count: formData.contract_count ? parseInt(formData.contract_count) : null,
+        p_paid_customer_count: formData.paid_customer_count ? parseInt(formData.paid_customer_count) : null,
+        p_average_contract_value: formData.average_contract_value ? parseInt(formData.average_contract_value) : null,
+        p_mau: formData.mau ? parseInt(formData.mau) : null,
+        p_dau: formData.dau ? parseInt(formData.dau) : null,
+        p_conversion_rate: formData.conversion_rate ? parseFloat(formData.conversion_rate) : null,
+        p_cac: formData.cac ? parseInt(formData.cac) : null,
+      });
+
+      const result = data as { success: boolean; error?: string };
+
+      if (!result.success) {
+        throw new Error(result.error || "제출에 실패했습니다");
+      }
+
+      setStatus("success");
+    } catch (error: any) {
+      toast({
+        title: "제출 실패",
+        description: error.message,
+        variant: "destructive",
+      });
+      setStatus("valid");
+    }
+  };
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Card className="w-full max-w-md animate-fade-in">
+          <CardContent className="flex flex-col items-center gap-4 p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-muted-foreground">요청을 확인하고 있습니다...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (status === "invalid") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md animate-fade-in">
+          <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
+            <AlertCircle className="h-12 w-12 text-destructive" />
+            <h2 className="text-xl font-semibold">유효하지 않은 요청입니다</h2>
+            <p className="text-muted-foreground">
+              요청 링크가 올바르지 않습니다. 이메일의 링크를 다시 확인해주세요.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (status === "expired") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md animate-fade-in">
+          <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
+            <AlertCircle className="h-12 w-12 text-amber-500" />
+            <h2 className="text-xl font-semibold">요청이 만료되었습니다</h2>
+            <p className="text-muted-foreground">
+              보고서 작성 요청이 만료되었습니다. 투자사에 새로운 요청을 요청해주세요.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (status === "completed" || status === "success") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md animate-fade-in">
+          <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
+            <CheckCircle2 className="h-12 w-12 text-primary" />
+            <h2 className="text-xl font-semibold">
+              {status === "success" ? "보고서 제출 완료!" : "이미 제출된 보고서입니다"}
+            </h2>
+            <p className="text-muted-foreground">
+              {companyName && `${companyName}의 `}주주보고서가 정상적으로 제출되었습니다.
+              <br />
+              감사합니다.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background p-4 py-8">
+      <div className="mx-auto max-w-2xl">
+        <Card className="animate-fade-in border-border shadow-sm">
+          <CardHeader className="border-b">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg font-semibold">
+                {companyName} 주주보고서 작성
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Required Fields Section */}
+              <div className="space-y-6">
+                <h3 className="text-base font-semibold text-foreground">
+                  필수 항목 <span className="text-destructive">*</span>
+                </h3>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="monthly_summary">이번 달 한 줄 요약</Label>
+                    <Textarea
+                      id="monthly_summary"
+                      placeholder="이번 달 주요 성과 또는 상황을 한 줄로 요약해주세요"
+                      value={formData.monthly_summary}
+                      onChange={(e) => handleInputChange("monthly_summary", e.target.value)}
+                      className="min-h-[80px]"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="problems_risks">문제/리스크</Label>
+                    <Textarea
+                      id="problems_risks"
+                      placeholder="현재 직면한 문제점이나 리스크를 작성해주세요"
+                      value={formData.problems_risks}
+                      onChange={(e) => handleInputChange("problems_risks", e.target.value)}
+                      className="min-h-[80px]"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="next_month_decisions">다음 달 중요한 의사결정 포인트</Label>
+                    <Textarea
+                      id="next_month_decisions"
+                      placeholder="다음 달에 결정해야 할 중요 사안을 작성해주세요"
+                      value={formData.next_month_decisions}
+                      onChange={(e) => handleInputChange("next_month_decisions", e.target.value)}
+                      className="min-h-[80px]"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="shareholder_input_needed">주주 의견이 필요한 사안</Label>
+                    <Textarea
+                      id="shareholder_input_needed"
+                      placeholder="주주들의 의견이나 조언이 필요한 사안을 작성해주세요"
+                      value={formData.shareholder_input_needed}
+                      onChange={(e) => handleInputChange("shareholder_input_needed", e.target.value)}
+                      className="min-h-[80px]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="monthly_revenue">월 매출 (원)</Label>
+                    <Input
+                      id="monthly_revenue"
+                      type="number"
+                      placeholder="0"
+                      value={formData.monthly_revenue}
+                      onChange={(e) => handleInputChange("monthly_revenue", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cumulative_revenue">누적 매출 (원)</Label>
+                    <Input
+                      id="cumulative_revenue"
+                      type="number"
+                      placeholder="0"
+                      value={formData.cumulative_revenue}
+                      onChange={(e) => handleInputChange("cumulative_revenue", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="fixed_costs">고정비 (원)</Label>
+                    <Input
+                      id="fixed_costs"
+                      type="number"
+                      placeholder="0"
+                      value={formData.fixed_costs}
+                      onChange={(e) => handleInputChange("fixed_costs", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="variable_costs">변동비 (원)</Label>
+                    <Input
+                      id="variable_costs"
+                      type="number"
+                      placeholder="0"
+                      value={formData.variable_costs}
+                      onChange={(e) => handleInputChange("variable_costs", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cash_balance">현금 잔고 (원)</Label>
+                    <Input
+                      id="cash_balance"
+                      type="number"
+                      placeholder="0"
+                      value={formData.cash_balance}
+                      onChange={(e) => handleInputChange("cash_balance", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="runway_months">Runway (개월)</Label>
+                    <Input
+                      id="runway_months"
+                      type="number"
+                      placeholder="0"
+                      value={formData.runway_months}
+                      onChange={(e) => handleInputChange("runway_months", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="employee_count_change">인원 수 변화</Label>
+                    <Input
+                      id="employee_count_change"
+                      type="number"
+                      placeholder="0 (증가: +, 감소: -)"
+                      value={formData.employee_count_change}
+                      onChange={(e) => handleInputChange("employee_count_change", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Optional Fields Section */}
+              <div className="space-y-6">
+                <h3 className="text-base font-semibold text-foreground">선택 항목</h3>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="contract_count">계약 수</Label>
+                    <Input
+                      id="contract_count"
+                      type="number"
+                      placeholder="선택 입력"
+                      value={formData.contract_count}
+                      onChange={(e) => handleInputChange("contract_count", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="paid_customer_count">유료 고객 수</Label>
+                    <Input
+                      id="paid_customer_count"
+                      type="number"
+                      placeholder="선택 입력"
+                      value={formData.paid_customer_count}
+                      onChange={(e) => handleInputChange("paid_customer_count", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="average_contract_value">평균 계약 단가 (원)</Label>
+                    <Input
+                      id="average_contract_value"
+                      type="number"
+                      placeholder="선택 입력"
+                      value={formData.average_contract_value}
+                      onChange={(e) => handleInputChange("average_contract_value", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="mau">MAU</Label>
+                    <Input
+                      id="mau"
+                      type="number"
+                      placeholder="선택 입력"
+                      value={formData.mau}
+                      onChange={(e) => handleInputChange("mau", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="dau">DAU</Label>
+                    <Input
+                      id="dau"
+                      type="number"
+                      placeholder="선택 입력"
+                      value={formData.dau}
+                      onChange={(e) => handleInputChange("dau", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="conversion_rate">전환율 (%)</Label>
+                    <Input
+                      id="conversion_rate"
+                      type="number"
+                      step="0.01"
+                      placeholder="선택 입력"
+                      value={formData.conversion_rate}
+                      onChange={(e) => handleInputChange("conversion_rate", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cac">CAC (원)</Label>
+                    <Input
+                      id="cac"
+                      type="number"
+                      placeholder="선택 입력"
+                      value={formData.cac}
+                      onChange={(e) => handleInputChange("cac", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={!isRequiredFieldsFilled() || status === "submitting"}
+                className="h-11 w-full rounded-lg"
+              >
+                {status === "submitting" ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    제출 중...
+                  </>
+                ) : (
+                  "주주보고서 제출"
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

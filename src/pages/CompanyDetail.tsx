@@ -1,8 +1,9 @@
 import { useParams } from "react-router-dom";
-import { Building2, TrendingUp, DollarSign, RefreshCw, FileText } from "lucide-react";
+import { Building2, TrendingUp, DollarSign, RefreshCw, FileText, Send, Loader2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -23,14 +24,10 @@ import {
   Tooltip,
 } from "recharts";
 import { useInvestee } from "@/hooks/useInvestees";
+import { useShareholderReports, useCreateReportRequest, useSendReportRequestEmail } from "@/hooks/useShareholderReports";
 import { Skeleton } from "@/components/ui/skeleton";
-
-// Mock chart data (in real app, this would come from the database)
-const burnRateData = [{ month: "02월", value: 80 }];
-const capitalData = [{ month: "02월", value: 18.23 }];
-const reports = [
-  { id: "1", title: "주주보고서 2026 1월", period: "2026년 02월", created: "2026.02.04" },
-];
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 function formatCurrency(amount: number | null): string {
   if (amount === null || amount === 0) return "정보 없음";
@@ -48,9 +45,72 @@ function formatDate(dateString: string | null): string {
   return dateString.replace(/-/g, ".");
 }
 
+function formatPeriod(period: string): string {
+  const [year, month] = period.split("-");
+  return `${year}년 ${month}월`;
+}
+
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
   const { data: company, isLoading } = useInvestee(id || "");
+  const { data: reports = [] } = useShareholderReports(id || "");
+  const createReportRequest = useCreateReportRequest();
+  const sendReportEmail = useSendReportRequestEmail();
+  const { toast } = useToast();
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
+
+  const handleRequestReport = async () => {
+    if (!company || !company.contact_email) {
+      toast({
+        title: "이메일 주소 없음",
+        description: "피투자사의 담당자 이메일이 등록되어 있지 않습니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingRequest(true);
+
+    try {
+      const request = await createReportRequest.mutateAsync(company.id);
+      await sendReportEmail.mutateAsync({
+        company_name: company.company_name,
+        contact_email: company.contact_email,
+        request_token: request.request_token,
+      });
+    } catch (error) {
+      // Error handling is done in the hooks
+    } finally {
+      setIsSendingRequest(false);
+    }
+  };
+
+  // Prepare chart data from reports
+  const revenueChartData = reports
+    .slice(0, 6)
+    .reverse()
+    .map((r) => ({
+      month: r.report_period.split("-")[1] + "월",
+      monthly: r.monthly_revenue / 10000, // Convert to 만원
+      cumulative: r.cumulative_revenue / 10000,
+    }));
+
+  const costChartData = reports
+    .slice(0, 6)
+    .reverse()
+    .map((r) => ({
+      month: r.report_period.split("-")[1] + "월",
+      fixed: r.fixed_costs / 10000,
+      variable: r.variable_costs / 10000,
+    }));
+
+  const cashChartData = reports
+    .slice(0, 6)
+    .reverse()
+    .map((r) => ({
+      month: r.report_period.split("-")[1] + "월",
+      value: r.cash_balance / 1000000, // Convert to 백만원
+    }));
 
   if (isLoading) {
     return (
@@ -83,10 +143,30 @@ export default function CompanyDetail() {
   }
 
   const today = new Date().toISOString().split("T")[0].replace(/-/g, ".");
+  const latestReport = reports[0];
 
   return (
     <DashboardLayout>
-      <PageHeader title="기업상세 정보" showBack />
+      <div className="mb-4 flex items-center justify-between">
+        <PageHeader title="기업상세 정보" showBack />
+        <Button
+          onClick={handleRequestReport}
+          disabled={isSendingRequest}
+          className="gap-2"
+        >
+          {isSendingRequest ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              발송 중...
+            </>
+          ) : (
+            <>
+              <Send className="h-4 w-4" />
+              주주보고서 작성 요청
+            </>
+          )}
+        </Button>
+      </div>
 
       {/* Company Info Card */}
       <Card className="mb-6 animate-fade-in border-border shadow-sm">
@@ -121,6 +201,31 @@ export default function CompanyDetail() {
         </CardContent>
       </Card>
 
+      {/* Latest Report Summary */}
+      {latestReport && (
+        <Card className="mb-6 animate-fade-in border-border shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base font-medium">
+              {formatPeriod(latestReport.report_period)} 보고서 요약
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <span className="text-sm font-medium text-muted-foreground">이번 달 요약</span>
+              <p className="mt-1 text-sm">{latestReport.monthly_summary}</p>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-muted-foreground">문제/리스크</span>
+              <p className="mt-1 text-sm">{latestReport.problems_risks}</p>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-muted-foreground">주주 의견 필요 사안</span>
+              <p className="mt-1 text-sm">{latestReport.shareholder_input_needed}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Charts Row */}
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Runway Card */}
@@ -133,7 +238,9 @@ export default function CompanyDetail() {
           </CardHeader>
           <CardContent>
             <div className="mb-4">
-              <span className="text-lg font-semibold text-primary">자본금 증가 상태</span>
+              <span className="text-lg font-semibold text-primary">
+                {latestReport ? `${latestReport.runway_months}개월` : "정보 없음"}
+              </span>
               <span className="ml-2 rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
                 Gross Burn Rate 기준
               </span>
@@ -160,15 +267,15 @@ export default function CompanyDetail() {
                     strokeWidth="12"
                     fill="none"
                     strokeDasharray="352"
-                    strokeDashoffset="88"
+                    strokeDashoffset={latestReport ? Math.max(0, 352 - (latestReport.runway_months / 24) * 352) : 352}
                     className="text-chart-secondary"
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="rounded-full bg-chart-secondary/20 px-2 py-0.5 text-xs font-medium text-chart-secondary">
-                    Cash Zero
+                  <span className="text-2xl font-bold">
+                    {latestReport?.runway_months || 0}
                   </span>
-                  <span className="mt-1 text-sm text-muted-foreground">자본금 증가</span>
+                  <span className="text-xs text-muted-foreground">개월</span>
                 </div>
               </div>
             </div>
@@ -176,80 +283,99 @@ export default function CompanyDetail() {
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded bg-primary" />
-                <span className="text-muted-foreground">자본금 | {formatCurrency(company.capital)}</span>
+                <span className="text-muted-foreground">현금 잔고 | {latestReport ? formatCurrency(latestReport.cash_balance) : "정보 없음"}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded bg-muted" />
-                <span className="text-muted-foreground">번 레이트 | 0 원</span>
+                <span className="text-muted-foreground">
+                  번 레이트 | {latestReport ? formatCurrency(latestReport.fixed_costs + latestReport.variable_costs) : "0 원"}
+                </span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Burn Rate Card */}
+        {/* Revenue Chart Card */}
         <Card className="animate-fade-in border-border shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">번 레이트</CardTitle>
+              <CardTitle className="text-sm font-medium">매출 추이</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <div className="mb-2">
-              <span className="text-lg font-semibold text-primary">자본금 증가</span>
+              <span className="text-lg font-semibold text-primary">
+                {latestReport ? formatCurrency(latestReport.monthly_revenue) : "정보 없음"}
+              </span>
             </div>
-            <p className="mb-4 text-xs text-muted-foreground">단위 : 십만원</p>
+            <p className="mb-4 text-xs text-muted-foreground">단위 : 만원</p>
 
             <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={burnRateData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" domain={[0, 100]} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="hsl(var(--chart-primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {revenueChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={revenueChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                    <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                    <Tooltip />
+                    <Bar dataKey="monthly" fill="hsl(var(--chart-primary))" radius={[4, 4, 0, 0]} name="월 매출" />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  보고서 데이터가 없습니다
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Capital Card */}
+        {/* Cash Balance Card */}
         <Card className="animate-fade-in border-border shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm font-medium">자본금</CardTitle>
+              <CardTitle className="text-sm font-medium">현금 잔고</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             <div className="mb-2">
-              <span className="text-2xl font-bold text-primary">{formatCurrency(company.capital)}</span>
+              <span className="text-2xl font-bold text-primary">
+                {latestReport ? formatCurrency(latestReport.cash_balance) : "정보 없음"}
+              </span>
             </div>
             <p className="mb-4 text-xs text-muted-foreground">단위 : 백만원</p>
 
             <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={capitalData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" domain={[0, 100]} />
-                  <Tooltip />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="hsl(var(--chart-primary))"
-                    strokeWidth={2}
-                    dot={{ fill: "hsl(var(--chart-primary))", strokeWidth: 2, r: 4 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {cashChartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={cashChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                    <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                    <Tooltip />
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke="hsl(var(--chart-primary))"
+                      strokeWidth={2}
+                      dot={{ fill: "hsl(var(--chart-primary))", strokeWidth: 2, r: 4 }}
+                      name="현금 잔고"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  보고서 데이터가 없습니다
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Shareholder Reports */}
+      {/* Shareholder Reports Table */}
       <Card className="animate-fade-in border-border shadow-sm">
         <CardHeader className="pb-4">
           <div className="flex items-center gap-2">
@@ -261,8 +387,10 @@ export default function CompanyDetail() {
           <Table>
             <TableHeader>
               <TableRow className="border-t">
-                <TableHead className="w-[50%] pl-6 font-medium text-foreground">문서명</TableHead>
-                <TableHead className="font-medium text-foreground">주주보고서 시기</TableHead>
+                <TableHead className="w-[30%] pl-6 font-medium text-foreground">보고 기간</TableHead>
+                <TableHead className="font-medium text-foreground">월 매출</TableHead>
+                <TableHead className="font-medium text-foreground">현금 잔고</TableHead>
+                <TableHead className="font-medium text-foreground">런웨이</TableHead>
                 <TableHead className="font-medium text-foreground">작성일</TableHead>
               </TableRow>
             </TableHeader>
@@ -270,14 +398,16 @@ export default function CompanyDetail() {
               {reports.length > 0 ? (
                 reports.map((report) => (
                   <TableRow key={report.id} className="cursor-pointer hover:bg-muted/50">
-                    <TableCell className="pl-6 font-medium">{report.title}</TableCell>
-                    <TableCell>{report.period}</TableCell>
-                    <TableCell>{report.created}</TableCell>
+                    <TableCell className="pl-6 font-medium">{formatPeriod(report.report_period)}</TableCell>
+                    <TableCell>{formatCurrency(report.monthly_revenue)}</TableCell>
+                    <TableCell>{formatCurrency(report.cash_balance)}</TableCell>
+                    <TableCell>{report.runway_months}개월</TableCell>
+                    <TableCell>{formatDate(report.created_at.split("T")[0])}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                     등록된 주주보고서가 없습니다.
                   </TableCell>
                 </TableRow>
