@@ -59,7 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
           <tr>
             <td style="background-color: #3B5BDB; padding: 24px 32px;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">Certed+</h1>
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">Certed</h1>
               <p style="margin: 4px 0 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">주주보고서 작성 요청</p>
             </td>
           </tr>
@@ -77,7 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
               <p style="margin: 0 0 24px 0; font-size: 16px; color: #1a1a1a;">이 있습니다.</p>
               <p style="margin: 0 0 16px 0; font-size: 14px; color: #4a4a4a; line-height: 1.6;">
                 안녕하세요. ${company_name} 담당자님,<br>
-                투자사에서 ${reportMonth} 주주보고서 작성을 요청하였습니다.<br><br>
+                빅베이슨 캐피털에서 ${reportMonth} 주주보고서 작성을 요청하였습니다.<br><br>
                 아래 버튼을 클릭하여 주주보고서를 작성해주시기 바랍니다.<br>
                 작성이 완료되면 투자사에게 자동으로 공유됩니다.
               </p>
@@ -106,9 +106,11 @@ const handler = async (req: Request): Promise<Response> => {
                 <a href="#" style="color: #888888; text-decoration: none;">서비스 약관</a>
               </p>
               <p style="margin: 0; font-size: 11px; color: #aaaaaa; line-height: 1.5;">
-                Home : goodgood.lovable.app &nbsp;&nbsp; E-Mail : help@gdpstudio.io<br>
-                호스팅 서비스 : GDP Studio Inc.<br>
-                © 2026 Certed+. All rights reserved.
+                Home : www.certifie.io &nbsp;&nbsp; E-Mail : help@certifie.io<br>
+                사업자 등록번호 : 146-87-02284 | 대표 : 이 유<br>
+                호스팅 서비스 : 주식회사 지디피스튜디오<br>
+                주소 : 서울특별시 금천구 가산디지털1로 120<br>
+                서울디지털산업단지 G밸리창업큐브 603 (08590)
               </p>
             </td>
           </tr>
@@ -122,7 +124,7 @@ const handler = async (req: Request): Promise<Response> => {
     await transporter.sendMail({
       from: gmailUser,
       to: contact_email,
-      subject: `[Certed+] ${company_name}님, ${reportMonth} 주주보고서 작성 요청`,
+      subject: `[빅베이슨 캐피털] ${company_name}님, ${reportMonth} 주주보고서 작성 요청`,
       html: emailHtml,
     });
 
