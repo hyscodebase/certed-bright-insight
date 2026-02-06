@@ -113,6 +113,140 @@ export type Database = {
         }
         Relationships: []
       }
+      report_requests: {
+        Row: {
+          completed_at: string | null
+          expires_at: string
+          id: string
+          investee_id: string
+          request_token: string
+          requested_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          expires_at?: string
+          id?: string
+          investee_id: string
+          request_token: string
+          requested_at?: string
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          expires_at?: string
+          id?: string
+          investee_id?: string
+          request_token?: string
+          requested_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_requests_investee_id_fkey"
+            columns: ["investee_id"]
+            isOneToOne: false
+            referencedRelation: "investees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shareholder_reports: {
+        Row: {
+          average_contract_value: number | null
+          cac: number | null
+          cash_balance: number
+          contract_count: number | null
+          conversion_rate: number | null
+          created_at: string
+          cumulative_revenue: number
+          dau: number | null
+          employee_count_change: number
+          fixed_costs: number
+          id: string
+          investee_id: string
+          mau: number | null
+          monthly_revenue: number
+          monthly_summary: string
+          next_month_decisions: string
+          paid_customer_count: number | null
+          problems_risks: string
+          report_period: string
+          report_request_id: string | null
+          runway_months: number
+          shareholder_input_needed: string
+          updated_at: string
+          variable_costs: number
+        }
+        Insert: {
+          average_contract_value?: number | null
+          cac?: number | null
+          cash_balance?: number
+          contract_count?: number | null
+          conversion_rate?: number | null
+          created_at?: string
+          cumulative_revenue?: number
+          dau?: number | null
+          employee_count_change?: number
+          fixed_costs?: number
+          id?: string
+          investee_id: string
+          mau?: number | null
+          monthly_revenue?: number
+          monthly_summary: string
+          next_month_decisions: string
+          paid_customer_count?: number | null
+          problems_risks: string
+          report_period: string
+          report_request_id?: string | null
+          runway_months?: number
+          shareholder_input_needed: string
+          updated_at?: string
+          variable_costs?: number
+        }
+        Update: {
+          average_contract_value?: number | null
+          cac?: number | null
+          cash_balance?: number
+          contract_count?: number | null
+          conversion_rate?: number | null
+          created_at?: string
+          cumulative_revenue?: number
+          dau?: number | null
+          employee_count_change?: number
+          fixed_costs?: number
+          id?: string
+          investee_id?: string
+          mau?: number | null
+          monthly_revenue?: number
+          monthly_summary?: string
+          next_month_decisions?: string
+          paid_customer_count?: number | null
+          problems_risks?: string
+          report_period?: string
+          report_request_id?: string | null
+          runway_months?: number
+          shareholder_input_needed?: string
+          updated_at?: string
+          variable_costs?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shareholder_reports_investee_id_fkey"
+            columns: ["investee_id"]
+            isOneToOne: false
+            referencedRelation: "investees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shareholder_reports_report_request_id_fkey"
+            columns: ["report_request_id"]
+            isOneToOne: false
+            referencedRelation: "report_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
