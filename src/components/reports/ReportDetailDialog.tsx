@@ -273,48 +273,28 @@ export function ReportDetailDialog({ report, open, onOpenChange, companyName }: 
                 <CardTitle className="text-base font-semibold">월간 주요 경영 현안 공유</CardTitle>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <Accordion type="single" collapsible defaultValue="plans" className="w-full">
-                <AccordionItem value="plans" className="border-b-0">
-                  <AccordionTrigger className="py-3 text-sm font-semibold text-primary hover:no-underline">
-                    월 주요 계획
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-3 text-sm">
-                      <p className="whitespace-pre-wrap">{report.next_month_decisions || "등록된 내용이 없습니다."}</p>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="summary" className="border-b-0">
-                  <AccordionTrigger className="py-3 text-sm font-semibold text-primary hover:no-underline">
-                    이번 달 요약
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-3 text-sm">
-                      <p className="whitespace-pre-wrap">{report.monthly_summary || "등록된 내용이 없습니다."}</p>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-
-                <AccordionItem value="issues" className="border-b-0">
-                  <AccordionTrigger className="py-3 text-sm font-semibold text-primary hover:no-underline">
-                    공유 사안
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-4 text-sm">
-                      <div>
-                        <span className="font-medium text-muted-foreground">문제/리스크:</span>
-                        <p className="mt-1 whitespace-pre-wrap">{report.problems_risks || "등록된 내용이 없습니다."}</p>
-                      </div>
-                      <div>
-                        <span className="font-medium text-muted-foreground">주주 의견 필요:</span>
-                        <p className="mt-1 whitespace-pre-wrap">{report.shareholder_input_needed || "등록된 내용이 없습니다."}</p>
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-primary">이번 달 요약</h4>
+                  <p className="mt-2 whitespace-pre-wrap text-sm">{report.monthly_summary || "등록된 내용이 없습니다."}</p>
+                </div>
+                <Separator />
+                <div>
+                  <h4 className="text-sm font-semibold text-primary">다음 달 중요한 의사결정 포인트</h4>
+                  <p className="mt-2 whitespace-pre-wrap text-sm">{report.next_month_decisions || "등록된 내용이 없습니다."}</p>
+                </div>
+                <Separator />
+                <div>
+                  <h4 className="text-sm font-semibold text-primary">문제/리스크</h4>
+                  <p className="mt-2 whitespace-pre-wrap text-sm">{report.problems_risks || "등록된 내용이 없습니다."}</p>
+                </div>
+                <Separator />
+                <div>
+                  <h4 className="text-sm font-semibold text-primary">주주 의견이 필요한 사안</h4>
+                  <p className="mt-2 whitespace-pre-wrap text-sm">{report.shareholder_input_needed || "등록된 내용이 없습니다."}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
