@@ -11,6 +11,7 @@ import AddInvestee from "./pages/AddInvestee";
 import InvesteeList from "./pages/InvesteeList";
 import CompanyDetail from "./pages/CompanyDetail";
 import Profile from "./pages/Profile";
+import AcceptInvitation from "./pages/AcceptInvitation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/accept-invitation" element={<AcceptInvitation />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
