@@ -7,20 +7,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useInviteInvestee } from "@/hooks/useInviteInvestee";
+import { useCreateInvestee } from "@/hooks/useInvestees";
 
 export default function AddInvestee() {
   const navigate = useNavigate();
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
-  const inviteInvestee = useInviteInvestee();
+  const createInvestee = useCreateInvestee();
 
   const isFormValid = companyName.trim() && email.trim();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    inviteInvestee.mutate(
+    createInvestee.mutate(
       { company_name: companyName, contact_email: email },
       {
         onSuccess: () => {
@@ -66,10 +66,10 @@ export default function AddInvestee() {
 
             <Button
               type="submit"
-              disabled={!isFormValid || inviteInvestee.isPending}
+              disabled={!isFormValid || createInvestee.isPending}
               className="h-11 w-full rounded-lg bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:bg-muted disabled:text-muted-foreground"
             >
-              {inviteInvestee.isPending ? "초대 발송 중..." : "초대 이메일 발송"}
+              {createInvestee.isPending ? "추가 중..." : "피투자사 추가"}
             </Button>
           </form>
         </CardContent>

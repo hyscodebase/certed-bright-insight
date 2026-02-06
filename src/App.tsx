@@ -12,6 +12,7 @@ import InvesteeList from "./pages/InvesteeList";
 import CompanyDetail from "./pages/CompanyDetail";
 import Profile from "./pages/Profile";
 import AcceptInvitation from "./pages/AcceptInvitation";
+import SubmitReport from "./pages/SubmitReport";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,6 +67,7 @@ const App = () => (
               }
             />
             <Route path="/accept-invitation" element={<AcceptInvitation />} />
+            <Route path="/submit-report" element={<SubmitReport />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
