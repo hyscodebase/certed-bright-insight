@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      investee_invitations: {
+        Row: {
+          accepted_at: string | null
+          company_name: string
+          contact_email: string
+          created_at: string
+          expires_at: string
+          id: string
+          invitation_token: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          company_name: string
+          contact_email: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invitation_token: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          company_name?: string
+          contact_email?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invitation_token?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       investees: {
         Row: {
           address: string | null
