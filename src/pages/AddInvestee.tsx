@@ -1,22 +1,33 @@
 import { useState } from "react";
 import { Building2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useCreateInvestee } from "@/hooks/useInvestees";
 
 export default function AddInvestee() {
+  const navigate = useNavigate();
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
+  const createInvestee = useCreateInvestee();
 
   const isFormValid = companyName.trim() && email.trim();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock submission
-    console.log({ companyName, email });
+    
+    createInvestee.mutate(
+      { company_name: companyName, contact_email: email },
+      {
+        onSuccess: () => {
+          navigate("/investees");
+        },
+      }
+    );
   };
 
   return (
@@ -55,10 +66,10 @@ export default function AddInvestee() {
 
             <Button
               type="submit"
-              disabled={!isFormValid}
+              disabled={!isFormValid || createInvestee.isPending}
               className="h-11 w-full rounded-lg bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground disabled:bg-muted disabled:text-muted-foreground"
             >
-              초대 메일 발송
+              {createInvestee.isPending ? "등록 중..." : "피투자사 등록"}
             </Button>
           </form>
         </CardContent>

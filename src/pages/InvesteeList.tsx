@@ -11,18 +11,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-const investees = [
-  {
-    id: "1",
-    name: "지디피스튜디오",
-    stage: "Seed",
-    employees: "-",
-  },
-];
+import { useInvestees } from "@/hooks/useInvestees";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function InvesteeList() {
   const navigate = useNavigate();
+  const { data: investees, isLoading } = useInvestees();
 
   return (
     <DashboardLayout>
@@ -51,17 +45,40 @@ export default function InvesteeList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {investees.map((company) => (
-                <TableRow
-                  key={company.id}
-                  className="cursor-pointer transition-colors hover:bg-muted/50"
-                  onClick={() => navigate(`/company/${company.id}`)}
-                >
-                  <TableCell className="pl-6 font-medium">{company.name}</TableCell>
-                  <TableCell>{company.stage}</TableCell>
-                  <TableCell>{company.employees}</TableCell>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="h-24">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                    </div>
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : investees && investees.length > 0 ? (
+                investees.map((company) => (
+                  <TableRow
+                    key={company.id}
+                    className="cursor-pointer transition-colors hover:bg-muted/50"
+                    onClick={() => navigate(`/company/${company.id}`)}
+                  >
+                    <TableCell className="pl-6 font-medium">{company.company_name}</TableCell>
+                    <TableCell>{company.investment_stage || "-"}</TableCell>
+                    <TableCell>{company.employee_count ?? "-"}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                    등록된 피투자사가 없습니다.
+                    <button
+                      onClick={() => navigate("/add-investee")}
+                      className="ml-2 text-primary hover:underline"
+                    >
+                      추가하기
+                    </button>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

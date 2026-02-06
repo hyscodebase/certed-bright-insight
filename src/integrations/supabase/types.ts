@@ -14,7 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      investees: {
+        Row: {
+          address: string | null
+          average_salary: number | null
+          capital: number | null
+          company_name: string
+          contact_email: string | null
+          created_at: string
+          employee_count: number | null
+          established_date: string | null
+          hire_count: number | null
+          id: string
+          industry: string | null
+          investment_stage: string | null
+          is_smb: boolean | null
+          representative: string | null
+          resign_count: number | null
+          total_investment: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          average_salary?: number | null
+          capital?: number | null
+          company_name: string
+          contact_email?: string | null
+          created_at?: string
+          employee_count?: number | null
+          established_date?: string | null
+          hire_count?: number | null
+          id?: string
+          industry?: string | null
+          investment_stage?: string | null
+          is_smb?: boolean | null
+          representative?: string | null
+          resign_count?: number | null
+          total_investment?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          average_salary?: number | null
+          capital?: number | null
+          company_name?: string
+          contact_email?: string | null
+          created_at?: string
+          employee_count?: number | null
+          established_date?: string | null
+          hire_count?: number | null
+          id?: string
+          industry?: string | null
+          investment_stage?: string | null
+          is_smb?: boolean | null
+          representative?: string | null
+          resign_count?: number | null
+          total_investment?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
