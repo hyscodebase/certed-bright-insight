@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
+import nodemailer from "npm:nodemailer@6.9.10";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,13 +34,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     const acceptUrl = `https://goodgood.lovable.app/accept-invitation?token=${invitation_token}`;
 
-    const client = new SmtpClient();
-
-    await client.connectTLS({
-      hostname: "smtp.gmail.com",
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
       port: 465,
-      username: gmailUser,
-      password: gmailPassword,
+      secure: true,
+      auth: {
+        user: gmailUser,
+        pass: gmailPassword,
+      },
     });
 
     const emailHtml = `<!DOCTYPE html>
@@ -124,15 +125,12 @@ const handler = async (req: Request): Promise<Response> => {
 </body>
 </html>`;
 
-    await client.send({
+    await transporter.sendMail({
       from: gmailUser,
       to: contact_email,
       subject: `[빅베이슨 캐피털] ${company_name}님, 써티드 투자사 연동 요청`,
-      content: "이메일 클라이언트가 HTML을 지원하지 않습니다.",
       html: emailHtml,
     });
-
-    await client.close();
 
     console.log("Invitation email sent successfully to:", contact_email);
 
