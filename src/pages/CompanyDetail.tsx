@@ -416,7 +416,7 @@ export default function CompanyDetail() {
 
       <ReportDetailDialog
         report={selectedReport}
-        company={company}
+        companyName={company?.company_name}
         open={isReportDialogOpen}
         onOpenChange={setIsReportDialogOpen}
       />
