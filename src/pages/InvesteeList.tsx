@@ -1,4 +1,4 @@
-import { List, ChevronRight } from "lucide-react";
+import { List, ChevronRight, Send, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -11,12 +11,74 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useInvestees } from "@/hooks/useInvestees";
+import { useLatestReportStatus } from "@/hooks/useLatestReportStatus";
+import { useCreateReportRequest, useSendReportRequestEmail } from "@/hooks/useShareholderReports";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function InvesteeList() {
   const navigate = useNavigate();
   const { data: investees, isLoading } = useInvestees();
+  const { data: reportStatuses } = useLatestReportStatus(investees?.map((i) => i.id) || []);
+  const createReportRequest = useCreateReportRequest();
+  const sendReportEmail = useSendReportRequestEmail();
+  const { toast } = useToast();
+  const [sendingId, setSendingId] = useState<string | null>(null);
+
+  const handleRequestReport = async (
+    e: React.MouseEvent,
+    investeeId: string,
+    companyName: string,
+    contactEmail: string | null
+  ) => {
+    e.stopPropagation();
+
+    if (!contactEmail) {
+      toast({
+        title: "이메일 주소 없음",
+        description: "피투자사의 담당자 이메일이 등록되어 있지 않습니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingId(investeeId);
+
+    try {
+      const request = await createReportRequest.mutateAsync(investeeId);
+      await sendReportEmail.mutateAsync({
+        company_name: companyName,
+        contact_email: contactEmail,
+        request_token: request.request_token,
+      });
+    } catch (error) {
+      // Error handling is done in the hooks
+    } finally {
+      setSendingId(null);
+    }
+  };
+
+  const getStatusBadge = (investeeId: string) => {
+    const status = reportStatuses?.[investeeId];
+    
+    if (!status) {
+      return <Badge variant="outline" className="text-muted-foreground">미요청</Badge>;
+    }
+    
+    if (status.hasReport) {
+      return <Badge variant="default" className="bg-chart-secondary text-white">제출완료</Badge>;
+    }
+    
+    if (status.hasPendingRequest) {
+      return <Badge variant="secondary">요청중</Badge>;
+    }
+    
+    return <Badge variant="outline" className="text-muted-foreground">미요청</Badge>;
+  };
 
   return (
     <DashboardLayout>
@@ -37,17 +99,18 @@ export default function InvesteeList() {
           <Table>
             <TableHeader>
               <TableRow className="border-t">
-                <TableHead className="w-[60%] pl-6 font-medium text-foreground">
+                <TableHead className="w-[35%] pl-6 font-medium text-foreground">
                   기업명
                 </TableHead>
-                <TableHead className="font-medium text-foreground">투자 단계</TableHead>
                 <TableHead className="font-medium text-foreground">직원수</TableHead>
+                <TableHead className="font-medium text-foreground">제출 상태</TableHead>
+                <TableHead className="font-medium text-foreground">보고서 요청</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="h-24">
+                  <TableCell colSpan={4} className="h-24">
                     <div className="space-y-2">
                       <Skeleton className="h-4 w-full" />
                       <Skeleton className="h-4 w-3/4" />
@@ -62,13 +125,36 @@ export default function InvesteeList() {
                     onClick={() => navigate(`/company/${company.id}`)}
                   >
                     <TableCell className="pl-6 font-medium">{company.company_name}</TableCell>
-                    <TableCell>{company.investment_stage || "-"}</TableCell>
                     <TableCell>{company.employee_count ?? "-"}</TableCell>
+                    <TableCell>{getStatusBadge(company.id)}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        disabled={sendingId === company.id}
+                        onClick={(e) =>
+                          handleRequestReport(e, company.id, company.company_name, company.contact_email)
+                        }
+                      >
+                        {sendingId === company.id ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            발송중
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-3.5 w-3.5" />
+                            요청
+                          </>
+                        )}
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                     등록된 피투자사가 없습니다.
                     <button
                       onClick={() => navigate("/add-investee")}
