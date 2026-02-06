@@ -19,6 +19,7 @@ import { useCreateReportRequest, useSendReportRequestEmail } from "@/hooks/useSh
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { ReportRequestDialog } from "@/components/reports/ReportRequestDialog";
 
 export default function InvesteeList() {
   const navigate = useNavigate();
@@ -28,8 +29,14 @@ export default function InvesteeList() {
   const sendReportEmail = useSendReportRequestEmail();
   const { toast } = useToast();
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedInvestee, setSelectedInvestee] = useState<{
+    id: string;
+    companyName: string;
+    contactEmail: string | null;
+  } | null>(null);
 
-  const handleRequestReport = async (
+  const handleOpenRequestDialog = (
     e: React.MouseEvent,
     investeeId: string,
     companyName: string,
@@ -46,23 +53,27 @@ export default function InvesteeList() {
       return;
     }
 
-    setSendingId(investeeId);
+    setSelectedInvestee({ id: investeeId, companyName, contactEmail });
+    setDialogOpen(true);
+  };
 
-    // Default to current month
-    const now = new Date();
-    const reportPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const handleConfirmRequest = async (reportPeriod: string) => {
+    if (!selectedInvestee || !selectedInvestee.contactEmail) return;
+
+    setSendingId(selectedInvestee.id);
 
     try {
       const request = await createReportRequest.mutateAsync({
-        investeeId,
+        investeeId: selectedInvestee.id,
         reportPeriod,
       });
       await sendReportEmail.mutateAsync({
-        company_name: companyName,
-        contact_email: contactEmail,
+        company_name: selectedInvestee.companyName,
+        contact_email: selectedInvestee.contactEmail,
         request_token: request.request_token,
         report_period: reportPeriod,
       });
+      setDialogOpen(false);
     } catch (error) {
       // Error handling is done in the hooks
     } finally {
@@ -142,7 +153,7 @@ export default function InvesteeList() {
                         className="gap-1.5"
                         disabled={sendingId === company.id}
                         onClick={(e) =>
-                          handleRequestReport(e, company.id, company.company_name, company.contact_email)
+                          handleOpenRequestDialog(e, company.id, company.company_name, company.contact_email)
                         }
                       >
                         {sendingId === company.id ? (
@@ -177,6 +188,16 @@ export default function InvesteeList() {
           </Table>
         </CardContent>
       </Card>
+
+      {selectedInvestee && (
+        <ReportRequestDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          companyName={selectedInvestee.companyName}
+          onConfirm={handleConfirmRequest}
+          isLoading={sendingId === selectedInvestee.id}
+        />
+      )}
     </DashboardLayout>
   );
 }

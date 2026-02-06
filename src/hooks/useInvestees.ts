@@ -60,7 +60,7 @@ export function useCreateInvestee() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: { company_name: string; contact_email: string }) => {
+    mutationFn: async (data: { company_name: string; contact_email: string; representative?: string | null }) => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error("로그인이 필요합니다");
 
@@ -70,6 +70,7 @@ export function useCreateInvestee() {
           user_id: user.user.id,
           company_name: data.company_name,
           contact_email: data.contact_email,
+          representative: data.representative,
         })
         .select()
         .single();
