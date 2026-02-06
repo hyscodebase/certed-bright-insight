@@ -32,7 +32,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Gmail credentials not configured");
     }
 
-    const acceptUrl = `https://goodgood.lovable.app/accept-invitation?token=${invitation_token}`;
+    const acceptUrl = `https://plus.certed.io/accept-invitation?token=${invitation_token}`;
 
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",

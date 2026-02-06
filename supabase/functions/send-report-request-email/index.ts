@@ -32,7 +32,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Gmail credentials not configured");
     }
 
-    const reportUrl = `https://goodgood.lovable.app/submit-report?token=${request_token}`;
+    const reportUrl = `https://plus.certed.io/submit-report?token=${request_token}`;
     const currentDate = new Date();
     const reportMonth = `${currentDate.getFullYear()}년 ${String(currentDate.getMonth() + 1).padStart(2, '0')}월`;
 
