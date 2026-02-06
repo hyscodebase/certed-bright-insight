@@ -12,6 +12,7 @@ export default function Signup() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,6 +45,9 @@ export default function Signup() {
       password,
       options: {
         emailRedirectTo: window.location.origin,
+        data: {
+          company_name: companyName,
+        },
       },
     });
 
@@ -109,6 +113,21 @@ export default function Signup() {
                   placeholder="이메일 주소를 입력하세요"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-12 rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="companyName" className="text-sm font-medium">
+                  회사명 <span className="text-primary">*</span>
+                </Label>
+                <Input
+                  id="companyName"
+                  type="text"
+                  placeholder="회사명을 입력하세요"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
                   required
                   className="h-12 rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary"
                 />
