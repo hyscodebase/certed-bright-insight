@@ -261,7 +261,7 @@ export default function CompanyDetail() {
                     fill="none"
                     strokeDasharray="352"
                     strokeDashoffset={latestReport ? Math.max(0, 352 - (latestReport.runway_months / 24) * 352) : 352}
-                    className="text-chart-secondary"
+                    className="text-primary"
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">

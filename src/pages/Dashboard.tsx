@@ -145,8 +145,8 @@ export default function Dashboard() {
             </div>
             <Progress value={submissionRate} className="h-3" />
             <div className="grid grid-cols-3 gap-4 pt-2">
-              <div className="text-center p-3 rounded-lg bg-chart-secondary/10">
-                <p className="text-lg font-semibold text-chart-secondary">{reportStats.submitted}</p>
+              <div className="text-center p-3 rounded-lg bg-primary/10">
+                <p className="text-lg font-semibold text-primary">{reportStats.submitted}</p>
                 <p className="text-xs text-muted-foreground">제출 완료</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-secondary">
