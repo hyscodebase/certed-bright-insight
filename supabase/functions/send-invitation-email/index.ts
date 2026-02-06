@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,16 +34,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     const acceptUrl = `https://goodgood.lovable.app/accept-invitation?token=${invitation_token}`;
 
-    const client = new SMTPClient({
-      connection: {
-        hostname: "smtp.gmail.com",
-        port: 465,
-        tls: true,
-        auth: {
-          username: gmailUser,
-          password: gmailPassword,
-        },
-      },
+    const client = new SmtpClient();
+
+    await client.connectTLS({
+      hostname: "smtp.gmail.com",
+      port: 465,
+      username: gmailUser,
+      password: gmailPassword,
     });
 
     const emailHtml = `<!DOCTYPE html>
@@ -131,14 +128,8 @@ const handler = async (req: Request): Promise<Response> => {
       from: gmailUser,
       to: contact_email,
       subject: `[빅베이슨 캐피털] ${company_name}님, 써티드 투자사 연동 요청`,
+      content: "이메일 클라이언트가 HTML을 지원하지 않습니다.",
       html: emailHtml,
-      mimeContent: [
-        {
-          mimeType: "text/html; charset=UTF-8",
-          content: emailHtml,
-          transferEncoding: "base64",
-        },
-      ],
     });
 
     await client.close();
