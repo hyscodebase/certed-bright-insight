@@ -87,13 +87,12 @@ function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
           <p>상호명 | 주식회사 지디피스튜디오</p>
           <p>대표자 | 이유</p>
           <p>사업자 등록번호 | 146-87-02284</p>
-          <p>통신판매업신고번호 | 2023-창원성산-0866</p>
           <p className="leading-relaxed">
-            주소 | 서울특별시 금천구 가산디지털1로 120 서울디지털산업단지 G벨리창업큐브 603 (08590)
+            주소 | 경기도 성남시 대왕판교로 625번길 13 경기창조혁신센터 8층
           </p>
           <p>이메일 | help@certifie.io</p>
           <p>전화번호 | 010-6212-0225</p>
-          <p className="mt-2">© 2024 GDP Studio Inc. All rights reserved.</p>
+          <p className="mt-2">© 2026 GDP Studio Inc. All rights reserved.</p>
         </div>
       </div>
     </>
