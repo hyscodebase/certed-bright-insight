@@ -1,6 +1,11 @@
-import { Home, Building2, List, User, LogOut } from "lucide-react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Home, Building2, List, User, LogOut, Menu, X } from "lucide-react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const menuItems = [
   { title: "홈", url: "/", icon: Home },
@@ -9,11 +14,26 @@ const menuItems = [
   { title: "프로필", url: "/profile", icon: User },
 ];
 
-export function AppSidebar() {
+function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        title: "로그아웃 실패",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      navigate("/login");
+    }
+  };
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-sidebar border-r border-sidebar-border bg-sidebar flex flex-col">
+    <>
       {/* Logo */}
       <div className="p-6">
         <h1 className="text-2xl font-bold text-primary">
@@ -30,6 +50,7 @@ export function AppSidebar() {
               <li key={item.title}>
                 <NavLink
                   to={item.url}
+                  onClick={onItemClick}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                     isActive
@@ -47,7 +68,10 @@ export function AppSidebar() {
 
         {/* Logout */}
         <div className="mt-4">
-          <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+          <button 
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
             <LogOut className="h-5 w-5" />
             <span>로그아웃</span>
           </button>
@@ -72,6 +96,40 @@ export function AppSidebar() {
           <p className="mt-2">© 2024 GDP Studio Inc. All rights reserved.</p>
         </div>
       </div>
+    </>
+  );
+}
+
+// Desktop Sidebar
+export function AppSidebar() {
+  return (
+    <aside className="fixed left-0 top-0 z-40 hidden h-screen w-[250px] flex-col border-r border-sidebar-border bg-sidebar md:flex">
+      <SidebarContent />
     </aside>
+  );
+}
+
+// Mobile Sidebar (Sheet)
+export function MobileSidebar() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden"
+        >
+          <Menu className="h-6 w-6" />
+          <span className="sr-only">메뉴 열기</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="w-[280px] p-0 bg-sidebar border-sidebar-border">
+        <div className="flex h-full flex-col">
+          <SidebarContent onItemClick={() => setOpen(false)} />
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
