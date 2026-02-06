@@ -12,6 +12,7 @@ import { useCreateInvestee } from "@/hooks/useInvestees";
 export default function AddInvestee() {
   const navigate = useNavigate();
   const [companyName, setCompanyName] = useState("");
+  const [representative, setRepresentative] = useState("");
   const [email, setEmail] = useState("");
   const createInvestee = useCreateInvestee();
 
@@ -21,7 +22,11 @@ export default function AddInvestee() {
     e.preventDefault();
     
     createInvestee.mutate(
-      { company_name: companyName, contact_email: email },
+      { 
+        company_name: companyName, 
+        contact_email: email,
+        representative: representative.trim() || null,
+      },
       {
         onSuccess: () => {
           navigate("/investees");
@@ -46,6 +51,19 @@ export default function AddInvestee() {
                 placeholder="피투자사의 기업명을 입력해주세요."
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
+                className="h-11 rounded-lg"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="representative" className="text-sm font-medium">
+                대표자명
+              </Label>
+              <Input
+                id="representative"
+                placeholder="피투자사의 대표자명을 입력해주세요."
+                value={representative}
+                onChange={(e) => setRepresentative(e.target.value)}
                 className="h-11 rounded-lg"
               />
             </div>
