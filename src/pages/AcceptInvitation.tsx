@@ -26,59 +26,36 @@ export default function AcceptInvitation() {
 
   const acceptInvitation = async () => {
     try {
-      // Get invitation details
-      const { data: invitation, error: fetchError } = await supabase
-        .from("investee_invitations")
-        .select("*")
-        .eq("invitation_token", token)
-        .single();
+      // Use the SECURITY DEFINER function to accept invitation
+      const { data, error } = await supabase.rpc("accept_invitation", {
+        p_invitation_token: token,
+      });
 
-      if (fetchError || !invitation) {
-        setStatus("error");
-        setErrorMessage("초대를 찾을 수 없습니다.");
+      if (error) {
+        throw error;
+      }
+
+      const result = data as {
+        success: boolean;
+        error?: string;
+        company_name?: string;
+        already_accepted?: boolean;
+      };
+
+      if (!result.success) {
+        if (result.error === "invitation_not_found") {
+          setStatus("error");
+          setErrorMessage("초대를 찾을 수 없습니다.");
+        } else if (result.error === "expired") {
+          setStatus("expired");
+        } else {
+          setStatus("error");
+          setErrorMessage("초대 수락 중 오류가 발생했습니다.");
+        }
         return;
       }
 
-      setCompanyName(invitation.company_name);
-
-      // Check if already accepted
-      if (invitation.status === "accepted") {
-        setStatus("success");
-        return;
-      }
-
-      // Check if expired
-      if (new Date(invitation.expires_at) < new Date()) {
-        setStatus("expired");
-        return;
-      }
-
-      // Update invitation status
-      const { error: updateError } = await supabase
-        .from("investee_invitations")
-        .update({
-          status: "accepted",
-          accepted_at: new Date().toISOString(),
-        })
-        .eq("id", invitation.id);
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      // Create actual investee record
-      const { error: insertError } = await supabase
-        .from("investees")
-        .insert({
-          user_id: invitation.user_id,
-          company_name: invitation.company_name,
-          contact_email: invitation.contact_email,
-        });
-
-      if (insertError) {
-        throw insertError;
-      }
-
+      setCompanyName(result.company_name || "");
       setStatus("success");
     } catch (error: any) {
       console.error("Error accepting invitation:", error);
