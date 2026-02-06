@@ -63,18 +63,27 @@ type RequiredField =
   | "runway_months"
   | "employee_count_change";
 
-const requiredFields: { key: RequiredField; label: string }[] = [
-  { key: "monthly_summary", label: "이번 달 한 줄 요약" },
-  { key: "problems_risks", label: "문제/리스크" },
-  { key: "next_month_decisions", label: "다음 달 중요한 의사결정 포인트" },
-  { key: "shareholder_input_needed", label: "주주 의견이 필요한 사안" },
-  { key: "monthly_revenue", label: "월 매출" },
-  { key: "fixed_costs", label: "고정비" },
-  { key: "variable_costs", label: "변동비" },
-  { key: "cash_balance", label: "현금 잔고" },
-  { key: "runway_months", label: "Runway" },
-  { key: "employee_count_change", label: "인원 수 변화" },
-];
+// Required fields are dynamically determined based on whether this is the first report
+const getRequiredFields = (isFirstReport: boolean): { key: RequiredField; label: string }[] => {
+  const baseFields: { key: RequiredField; label: string }[] = [
+    { key: "monthly_summary", label: "이번 달 한 줄 요약" },
+    { key: "problems_risks", label: "문제/리스크" },
+    { key: "next_month_decisions", label: "다음 달 중요한 의사결정 포인트" },
+    { key: "shareholder_input_needed", label: "주주 의견이 필요한 사안" },
+    { key: "monthly_revenue", label: "월 매출" },
+    { key: "fixed_costs", label: "고정비" },
+    { key: "variable_costs", label: "변동비" },
+    { key: "runway_months", label: "Runway" },
+    { key: "employee_count_change", label: "인원 수 변화" },
+  ];
+  
+  // Only require cash_balance for the first report
+  if (isFirstReport) {
+    baseFields.push({ key: "cash_balance", label: "현금 잔고" });
+  }
+  
+  return baseFields;
+};
 
 export default function SubmitReport() {
   const [searchParams] = useSearchParams();
@@ -88,6 +97,8 @@ export default function SubmitReport() {
   const [formData, setFormData] = useState<ReportFormData>(initialFormData);
   const [investeeId, setInvesteeId] = useState<string>("");
   const [previousCumulativeRevenue, setPreviousCumulativeRevenue] = useState<number>(0);
+  const [previousCashBalance, setPreviousCashBalance] = useState<number | null>(null);
+  const [isFirstReport, setIsFirstReport] = useState<boolean>(true);
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [showValidationErrors, setShowValidationErrors] = useState(false);
 
@@ -136,17 +147,21 @@ export default function SubmitReport() {
           setReportPeriod(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
         }
 
-        // Fetch previous cumulative revenue
+        // Fetch previous report data (cumulative revenue and cash balance)
         if (investee?.id) {
           const { data: reportsData } = await supabase
             .from("shareholder_reports")
-            .select("cumulative_revenue")
+            .select("cumulative_revenue, cash_balance, monthly_revenue, fixed_costs, variable_costs")
             .eq("investee_id", investee.id)
             .order("report_period", { ascending: false })
             .limit(1);
           
           if (reportsData && reportsData.length > 0) {
             setPreviousCumulativeRevenue(reportsData[0].cumulative_revenue || 0);
+            setPreviousCashBalance(reportsData[0].cash_balance || 0);
+            setIsFirstReport(false);
+          } else {
+            setIsFirstReport(true);
           }
         }
         
@@ -163,6 +178,8 @@ export default function SubmitReport() {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setTouchedFields((prev) => new Set(prev).add(field));
   };
+
+  const requiredFields = getRequiredFields(isFirstReport);
 
   const getMissingRequiredFields = (): string[] => {
     return requiredFields
@@ -192,6 +209,12 @@ export default function SubmitReport() {
   // Calculate cumulative revenue automatically
   const calculatedCumulativeRevenue = previousCumulativeRevenue + (parseInt(formData.monthly_revenue) || 0);
 
+  // Calculate cash balance: first report = manual input, subsequent = auto calculation
+  // Formula: previous cash balance + this month revenue - fixed costs - variable costs
+  const calculatedCashBalance = isFirstReport 
+    ? parseInt(formData.cash_balance) || 0
+    : (previousCashBalance || 0) + (parseInt(formData.monthly_revenue) || 0) - (parseInt(formData.fixed_costs) || 0) - (parseInt(formData.variable_costs) || 0);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setShowValidationErrors(true);
@@ -219,7 +242,7 @@ export default function SubmitReport() {
         p_cumulative_revenue: calculatedCumulativeRevenue,
         p_fixed_costs: parseInt(formData.fixed_costs) || 0,
         p_variable_costs: parseInt(formData.variable_costs) || 0,
-        p_cash_balance: parseInt(formData.cash_balance) || 0,
+        p_cash_balance: calculatedCashBalance,
         p_runway_months: parseInt(formData.runway_months) || 0,
         p_employee_count_change: parseInt(formData.employee_count_change) || 0,
         p_contract_count: formData.contract_count ? parseInt(formData.contract_count) : null,
@@ -470,18 +493,36 @@ export default function SubmitReport() {
 
                   <div className="space-y-2">
                     <Label htmlFor="cash_balance">
-                      현금 잔고 (원) <span className="text-destructive">*</span>
+                      현금 잔고 (원) {isFirstReport && <span className="text-destructive">*</span>}
                     </Label>
-                    <Input
-                      id="cash_balance"
-                      type="number"
-                      placeholder="0"
-                      value={formData.cash_balance}
-                      onChange={(e) => handleInputChange("cash_balance", e.target.value)}
-                      className={isFieldInvalid("cash_balance") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("cash_balance") && (
-                      <p className="text-xs text-destructive">필수 항목입니다</p>
+                    {isFirstReport ? (
+                      <>
+                        <Input
+                          id="cash_balance"
+                          type="number"
+                          placeholder="0"
+                          value={formData.cash_balance}
+                          onChange={(e) => handleInputChange("cash_balance", e.target.value)}
+                          className={isFieldInvalid("cash_balance") ? "border-destructive" : ""}
+                        />
+                        {isFieldInvalid("cash_balance") && (
+                          <p className="text-xs text-destructive">필수 항목입니다</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">첫 보고서에서만 직접 입력합니다</p>
+                      </>
+                    ) : (
+                      <>
+                        <Input
+                          id="cash_balance"
+                          type="number"
+                          value={calculatedCashBalance}
+                          disabled
+                          className="bg-muted"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          자동 계산: 전달 잔고({previousCashBalance?.toLocaleString()}원) + 월 매출 - 고정비 - 변동비
+                        </p>
+                      </>
                     )}
                   </div>
 
