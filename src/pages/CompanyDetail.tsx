@@ -187,26 +187,9 @@ export default function CompanyDetail() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Left Column */}
-            <div className="space-y-4">
-              <InfoRow label="산업" value={company.industry || "정보 없음"} />
-              <InfoRow label="기업구분" value={company.is_smb ? "중소기업" : "대기업"} />
-              <InfoRow label="자본금" value={formatCurrency(company.capital)} subtext={`${today} 기준`} />
-              <InfoRow label="대표자" value={company.representative || "정보 없음"} />
-              <InfoRow label="설립일" value={formatDate(company.established_date)} />
-              <InfoRow label="직원수" value={company.employee_count?.toString() || "0"} subtext={`${today} 기준`} />
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-4">
-              <InfoRow label="입사자" value={`${company.hire_count || 0} 명`} subtext="최근 3 개월" />
-              <InfoRow label="퇴사자" value={`${company.resign_count || 0} 명`} subtext="최근 3 개월" />
-              <InfoRow label="투자단계" value={company.investment_stage || "Seed"} />
-              <InfoRow label="투자액" value={formatCurrency(company.total_investment)} />
-              <InfoRow label="평균연봉" value={formatCurrency(company.average_salary)} />
-              <InfoRow label="주소" value={company.address || "정보 없음"} />
-            </div>
+          <div className="space-y-3">
+            <InfoRow label="대표자" value={company.representative || "정보 없음"} />
+            <InfoRow label="담당자 이메일" value={company.contact_email || "정보 없음"} />
           </div>
         </CardContent>
       </Card>
