@@ -1,10 +1,8 @@
-import { useRef, useState } from "react";
-import { ChevronLeft, FileDown, Users, DollarSign, FileText, Loader2 } from "lucide-react";
+import { ChevronLeft, Users, DollarSign, FileText } from "lucide-react";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Accordion,
@@ -20,8 +18,6 @@ import {
   YAxis,
   ResponsiveContainer,
 } from "recharts";
-import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 import type { ShareholderReport } from "@/hooks/useShareholderReports";
 
 interface ReportDetailDialogProps {
@@ -48,9 +44,6 @@ function formatPeriod(period: string): string {
 }
 
 export function ReportDetailDialog({ report, open, onOpenChange, companyName }: ReportDetailDialogProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-
   if (!report) return null;
 
   const totalExpense = report.fixed_costs + report.variable_costs;
@@ -62,61 +55,6 @@ export function ReportDetailDialog({ report, open, onOpenChange, companyName }: 
   const dauChartData = report.dau !== null ? [{ month, value: report.dau }] : [];
   const paidCustomerChartData = report.paid_customer_count !== null ? [{ month, value: report.paid_customer_count }] : [];
   const revenueChartData = [{ month, value: report.monthly_revenue / 10000 }];
-
-  const handleDownloadPdf = async () => {
-    if (!contentRef.current) return;
-    
-    setIsGeneratingPdf(true);
-    
-    try {
-      const canvas = await html2canvas(contentRef.current, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-      });
-      
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
-      });
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 0;
-      
-      // Calculate total pages needed
-      const scaledHeight = imgHeight * ratio;
-      const totalPages = Math.ceil(scaledHeight / pdfHeight);
-      
-      for (let page = 0; page < totalPages; page++) {
-        if (page > 0) {
-          pdf.addPage();
-        }
-        pdf.addImage(
-          imgData,
-          "PNG",
-          imgX,
-          imgY - page * pdfHeight,
-          imgWidth * ratio,
-          imgHeight * ratio
-        );
-      }
-      
-      const fileName = `${companyName || "피투자사"}_${formatPeriod(report.report_period)}_주주보고서.pdf`;
-      pdf.save(fileName);
-    } catch (error) {
-      console.error("PDF generation failed:", error);
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -134,23 +72,9 @@ export function ReportDetailDialog({ report, open, onOpenChange, companyName }: 
               {companyName || "피투자사"} {formatPeriod(report.report_period)}
             </h1>
           </div>
-          <Button 
-            variant="default" 
-            size="sm" 
-            className="gap-2"
-            onClick={handleDownloadPdf}
-            disabled={isGeneratingPdf}
-          >
-            {isGeneratingPdf ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileDown className="h-4 w-4" />
-            )}
-            PDF
-          </Button>
         </div>
 
-        <div ref={contentRef} className="space-y-6 bg-background p-6">
+        <div className="space-y-6 p-6">
           {/* Monthly Customer Metrics */}
           <Card className="border-border">
             <CardHeader className="pb-4">
