@@ -30,6 +30,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ReportDetailDialog } from "@/components/reports/ReportDetailDialog";
 import { ReportRequestDialog } from "@/components/reports/ReportRequestDialog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 function formatCurrency(amount: number | null): string {
   if (amount === null || amount === 0) return "정보 없음";
@@ -64,6 +66,23 @@ export default function CompanyDetail() {
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
 
+  // Fetch investor's company name from profile
+  const { data: investorProfile } = useQuery({
+    queryKey: ["investor-profile"],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("company_name")
+        .eq("user_id", user.user.id)
+        .single();
+      return data;
+    },
+  });
+
+  const investorCompanyName = investorProfile?.company_name || "투자사";
+
   const handleReportClick = (report: ShareholderReport) => {
     setSelectedReport(report);
     setIsReportDialogOpen(true);
@@ -96,6 +115,7 @@ export default function CompanyDetail() {
         contact_email: company.contact_email,
         request_token: request.request_token,
         report_period: reportPeriod,
+        investor_company_name: investorCompanyName,
       });
       setIsRequestDialogOpen(false);
     } catch (error) {

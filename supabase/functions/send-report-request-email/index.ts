@@ -11,6 +11,8 @@ interface ReportRequestEmailParams {
   company_name: string;
   contact_email: string;
   request_token: string;
+  report_period: string;
+  investor_company_name: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -19,11 +21,21 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { company_name, contact_email, request_token }: ReportRequestEmailParams = await req.json();
+    const { company_name, contact_email, request_token, report_period, investor_company_name }: ReportRequestEmailParams = await req.json();
 
     if (!company_name || !contact_email || !request_token) {
       throw new Error("Missing required fields");
     }
+
+    const investorName = investor_company_name || "투자사";
+    
+    // Use provided report_period or fall back to current date
+    const periodToUse = report_period || (() => {
+      const currentDate = new Date();
+      return `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    })();
+    const [year, month] = periodToUse.split("-");
+    const reportMonth = `${year}년 ${month}월`;
 
     const gmailUser = Deno.env.get("GMAIL_USER");
     const gmailPassword = Deno.env.get("GMAIL_APP_PASSWORD");
@@ -33,8 +45,6 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const reportUrl = `https://plus.certed.io/submit-report?token=${request_token}`;
-    const currentDate = new Date();
-    const reportMonth = `${currentDate.getFullYear()}년 ${String(currentDate.getMonth() + 1).padStart(2, '0')}월`;
 
     const transporter = nodemailer.createTransport({
       host: "smtp.gmail.com",
@@ -77,7 +87,7 @@ const handler = async (req: Request): Promise<Response> => {
               <p style="margin: 0 0 24px 0; font-size: 16px; color: #1a1a1a;">이 있습니다.</p>
               <p style="margin: 0 0 16px 0; font-size: 14px; color: #4a4a4a; line-height: 1.6;">
                 안녕하세요. ${company_name} 담당자님,<br>
-                빅베이슨 캐피털에서 ${reportMonth} 주주보고서 작성을 요청하였습니다.<br><br>
+                ${investorName}에서 ${reportMonth} 주주보고서 작성을 요청하였습니다.<br><br>
                 아래 버튼을 클릭하여 주주보고서를 작성해주시기 바랍니다.<br>
                 작성이 완료되면 투자사에게 자동으로 공유됩니다.
               </p>
@@ -123,7 +133,7 @@ const handler = async (req: Request): Promise<Response> => {
     await transporter.sendMail({
       from: gmailUser,
       to: contact_email,
-      subject: `[빅베이슨 캐피털] ${company_name}님, ${reportMonth} 주주보고서 작성 요청`,
+      subject: `[${investorName}] ${company_name}님, ${reportMonth} 주주보고서 작성 요청`,
       html: emailHtml,
     });
 

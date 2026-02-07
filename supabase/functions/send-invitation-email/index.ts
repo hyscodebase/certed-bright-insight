@@ -11,6 +11,7 @@ interface InvitationRequest {
   company_name: string;
   contact_email: string;
   invitation_token: string;
+  investor_company_name: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -19,11 +20,13 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { company_name, contact_email, invitation_token }: InvitationRequest = await req.json();
+    const { company_name, contact_email, invitation_token, investor_company_name }: InvitationRequest = await req.json();
 
     if (!company_name || !contact_email || !invitation_token) {
       throw new Error("Missing required fields");
     }
+
+    const investorName = investor_company_name || "투자사";
 
     const gmailUser = Deno.env.get("GMAIL_USER");
     const gmailPassword = Deno.env.get("GMAIL_APP_PASSWORD");
@@ -71,18 +74,18 @@ const handler = async (req: Request): Promise<Response> => {
               <h2 style="margin: 0 0 8px 0; font-size: 18px; color: #1a1a1a;">
                 <span style="font-weight: 400;">${company_name}</span> 담당자님,
               </h2>
-              <p style="margin: 0 0 4px 0; font-size: 16px; color: #3B5BDB; font-weight: 600;">빅베이슨 캐피털</p>
+              <p style="margin: 0 0 4px 0; font-size: 16px; color: #3B5BDB; font-weight: 600;">${investorName}</p>
               <p style="margin: 0 0 24px 0; font-size: 16px; color: #1a1a1a;">과 써티드 연동을 진행해주세요.</p>
               <p style="margin: 0 0 16px 0; font-size: 14px; color: #4a4a4a; line-height: 1.6;">
                 안녕하세요. ${company_name} 담당자님,<br>
-                투자사 빅베이슨 캐피털의 써티드 연동 요청이 있습니다.<br>
+                투자사 ${investorName}의 써티드 연동 요청이 있습니다.<br>
                 써티드는 경력증명서 및 각종 HR 문서 작성 서비스로써<br>
                 투자사와 피투자사 간의 주주보고서 공유 기능도 제공하고 있습니다.<br>
-                써티드에 회원가입을 하시면 빅베이슨 캐피털과 연동되어<br>
+                써티드에 회원가입을 하시면 ${investorName}과 연동되어<br>
                 편리하게 주주보고서를 연동 시킬 수 있습니다.
               </p>
               <p style="margin: 0 0 8px 0; font-size: 14px; color: #4a4a4a; line-height: 1.6;">
-                아래 '<span style="color: #3B5BDB; font-weight: 500;">써티드 투자사 연동하기</span>' 버튼을 클릭하여 빅베이슨 캐피털 과<br>
+                아래 '<span style="color: #3B5BDB; font-weight: 500;">써티드 투자사 연동하기</span>' 버튼을 클릭하여 ${investorName} 과<br>
                 써티드 연동을 진행하여 주시기 바랍니다.
               </p>
               <p style="margin: 0 0 32px 0; font-size: 12px; color: #888888;">
@@ -127,7 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
     await transporter.sendMail({
       from: gmailUser,
       to: contact_email,
-      subject: `[빅베이슨 캐피털] ${company_name}님, 써티드 투자사 연동 요청`,
+      subject: `[${investorName}] ${company_name}님, 써티드 투자사 연동 요청`,
       html: emailHtml,
     });
 

@@ -11,6 +11,15 @@ export function useInviteInvestee() {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error("로그인이 필요합니다");
 
+      // Get investor's company name from profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_name")
+        .eq("user_id", user.user.id)
+        .single();
+
+      const investorCompanyName = profile?.company_name || "투자사";
+
       // Generate unique invitation token
       const invitationToken = crypto.randomUUID();
 
@@ -36,6 +45,7 @@ export function useInviteInvestee() {
             company_name: data.company_name,
             contact_email: data.contact_email,
             invitation_token: invitationToken,
+            investor_company_name: investorCompanyName,
           },
         }
       );

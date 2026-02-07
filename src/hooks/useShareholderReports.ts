@@ -84,6 +84,7 @@ export function useSendReportRequestEmail() {
       contact_email: string;
       request_token: string;
       report_period: string;
+      investor_company_name: string;
     }) => {
       const response = await supabase.functions.invoke("send-report-request-email", {
         body: params,
