@@ -16,11 +16,21 @@ export default {
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
+        /**
+         * ⚠️ IMPORTANT: Brand primary color - DO NOT CONVERT TO HSL
+         * This must remain as HEX "#3769FC" for brand consistency.
+         * Never change this to hsl() format under any circumstances.
+         */
         ring: "#3769FC",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        /**
+         * ⚠️ IMPORTANT: Brand primary color - DO NOT CONVERT TO HSL
+         * This must remain as HEX "#3769FC" for brand consistency.
+         * Never change this to hsl() format under any circumstances.
+         */
         primary: {
-          DEFAULT: "#3769FC",
+          DEFAULT: "#3769FC", // ⚠️ DO NOT CONVERT TO HSL - Brand color
           foreground: "#FFFFFF",
         },
         secondary: {
@@ -47,19 +57,28 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        /**
+         * ⚠️ IMPORTANT: Sidebar colors - DO NOT CONVERT TO HSL
+         * primary, primary-foreground, accent, accent-foreground, ring
+         * must remain as HEX values for brand consistency.
+         */
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
-          primary: "#3769FC",
+          primary: "#3769FC", // ⚠️ DO NOT CONVERT TO HSL - Brand color
           "primary-foreground": "#FFFFFF",
           accent: "#EEF2FF",
-          "accent-foreground": "#3769FC",
+          "accent-foreground": "#3769FC", // ⚠️ DO NOT CONVERT TO HSL - Brand color
           border: "hsl(var(--sidebar-border))",
-          ring: "#3769FC",
+          ring: "#3769FC", // ⚠️ DO NOT CONVERT TO HSL - Brand color
         },
+        /**
+         * ⚠️ IMPORTANT: Chart colors - DO NOT CONVERT TO HSL
+         * primary and secondary must remain as HEX "#3769FC" for brand consistency.
+         */
         chart: {
-          primary: "#3769FC",
-          secondary: "#3769FC",
+          primary: "#3769FC", // ⚠️ DO NOT CONVERT TO HSL - Brand color
+          secondary: "#3769FC", // ⚠️ DO NOT CONVERT TO HSL - Brand color
           muted: "hsl(var(--chart-muted))",
         },
         highlight: "hsl(var(--input-highlight))",
