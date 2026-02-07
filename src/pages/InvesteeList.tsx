@@ -20,6 +20,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ReportRequestDialog } from "@/components/reports/ReportRequestDialog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function InvesteeList() {
   const navigate = useNavigate();
@@ -35,6 +37,23 @@ export default function InvesteeList() {
     companyName: string;
     contactEmail: string | null;
   } | null>(null);
+
+  // Fetch investor's company name from profile
+  const { data: investorProfile } = useQuery({
+    queryKey: ["investor-profile"],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("company_name")
+        .eq("user_id", user.user.id)
+        .single();
+      return data;
+    },
+  });
+
+  const investorCompanyName = investorProfile?.company_name || "투자사";
 
   const handleOpenRequestDialog = (
     e: React.MouseEvent,
@@ -72,6 +91,7 @@ export default function InvesteeList() {
         contact_email: selectedInvestee.contactEmail,
         request_token: request.request_token,
         report_period: reportPeriod,
+        investor_company_name: investorCompanyName,
       });
       setDialogOpen(false);
     } catch (error) {
