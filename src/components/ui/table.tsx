@@ -11,8 +11,14 @@ const Table = React.forwardRef<HTMLTableElement, React.HTMLAttributes<HTMLTableE
 );
 Table.displayName = "Table";
 
+/**
+ * TableHeader automatically disables hover effect on all child TableRow elements.
+ * This is intentional design - header rows should not have hover effects.
+ */
 const TableHeader = React.forwardRef<HTMLTableSectionElement, React.HTMLAttributes<HTMLTableSectionElement>>(
-  ({ className, ...props }, ref) => <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />,
+  ({ className, ...props }, ref) => (
+    <thead ref={ref} className={cn("[&_tr]:border-b [&_tr]:hover:bg-transparent", className)} {...props} />
+  ),
 );
 TableHeader.displayName = "TableHeader";
 
