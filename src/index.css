@@ -15,9 +15,13 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 13% 13%;
 
-    /* Primary: Blue #3769FC */
-    --primary: 225 97% 70%;
-    --primary-foreground: 0 0% 100%;
+    /**
+     * ⚠️⚠️⚠️ CRITICAL: BRAND PRIMARY COLOR ⚠️⚠️⚠️
+     * MUST remain as HEX #3769FC - NEVER convert to HSL!
+     * This is a brand requirement. Do not change under any circumstances.
+     */
+    --primary: #3769FC;
+    --primary-foreground: #FFFFFF;
 
     --secondary: 220 14% 96%;
     --secondary-foreground: 220 13% 13%;
@@ -33,7 +37,8 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 225 97% 70%;
+    /* ⚠️ DO NOT CONVERT TO HSL - Brand color */
+    --ring: #3769FC;
 
     --radius: 0.5rem;
 
@@ -43,16 +48,19 @@
 
     --sidebar-background: 220 14% 98%;
     --sidebar-foreground: 220 9% 46%;
-    --sidebar-primary: 225 97% 70%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 225 97% 97%;
-    --sidebar-accent-foreground: 225 97% 70%;
+    /* ⚠️ DO NOT CONVERT TO HSL - Brand color */
+    --sidebar-primary: #3769FC;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: #EEF2FF;
+    /* ⚠️ DO NOT CONVERT TO HSL - Brand color */
+    --sidebar-accent-foreground: #3769FC;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 225 97% 70%;
+    /* ⚠️ DO NOT CONVERT TO HSL - Brand color */
+    --sidebar-ring: #3769FC;
 
-    /* Chart colors */
-    --chart-primary: 225 97% 70%;
-    --chart-secondary: 225 97% 70%;
+    /* Chart colors - ⚠️ DO NOT CONVERT TO HSL - Brand color */
+    --chart-primary: #3769FC;
+    --chart-secondary: #3769FC;
     --chart-muted: 220 14% 90%;
   }
 
@@ -66,8 +74,12 @@
     --popover: 220 13% 12%;
     --popover-foreground: 220 14% 96%;
 
-    --primary: 225 97% 65%;
-    --primary-foreground: 0 0% 100%;
+    /**
+     * ⚠️⚠️⚠️ CRITICAL: BRAND PRIMARY COLOR ⚠️⚠️⚠️
+     * MUST remain as HEX #3769FC - NEVER convert to HSL!
+     */
+    --primary: #3769FC;
+    --primary-foreground: #FFFFFF;
 
     --secondary: 220 13% 18%;
     --secondary-foreground: 220 14% 96%;
@@ -83,16 +95,20 @@
 
     --border: 220 13% 20%;
     --input: 220 13% 20%;
-    --ring: 225 97% 65%;
+    /* ⚠️ DO NOT CONVERT TO HSL - Brand color */
+    --ring: #3769FC;
 
     --sidebar-background: 220 13% 10%;
     --sidebar-foreground: 220 9% 60%;
-    --sidebar-primary: 225 97% 65%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    /* ⚠️ DO NOT CONVERT TO HSL - Brand color */
+    --sidebar-primary: #3769FC;
+    --sidebar-primary-foreground: #FFFFFF;
     --sidebar-accent: 220 13% 18%;
-    --sidebar-accent-foreground: 220 14% 96%;
+    /* ⚠️ DO NOT CONVERT TO HSL - Brand color */
+    --sidebar-accent-foreground: #3769FC;
     --sidebar-border: 220 13% 20%;
-    --sidebar-ring: 225 97% 65%;
+    /* ⚠️ DO NOT CONVERT TO HSL - Brand color */
+    --sidebar-ring: #3769FC;
   }
 }
 
