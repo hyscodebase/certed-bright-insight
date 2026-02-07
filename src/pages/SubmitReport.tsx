@@ -157,9 +157,13 @@ export default function SubmitReport() {
             .limit(1);
           
           if (reportsData && reportsData.length > 0) {
+            const prevCash = reportsData[0].cash_balance || 0;
             setPreviousCumulativeRevenue(reportsData[0].cumulative_revenue || 0);
-            setPreviousCashBalance(reportsData[0].cash_balance || 0);
+            setPreviousCashBalance(prevCash);
             setIsFirstReport(false);
+            // Set default cash_balance calculated from previous data
+            // Will be updated when user changes revenue/costs
+            setFormData(prev => ({ ...prev, cash_balance: String(prevCash) }));
           } else {
             setIsFirstReport(true);
           }
@@ -209,11 +213,20 @@ export default function SubmitReport() {
   // Calculate cumulative revenue automatically
   const calculatedCumulativeRevenue = previousCumulativeRevenue + (parseInt(formData.monthly_revenue) || 0);
 
-  // Calculate cash balance: first report = manual input, subsequent = auto calculation
+  // Calculate default cash balance for non-first reports
   // Formula: previous cash balance + this month revenue - fixed costs - variable costs
-  const calculatedCashBalance = isFirstReport 
-    ? parseInt(formData.cash_balance) || 0
-    : (previousCashBalance || 0) + (parseInt(formData.monthly_revenue) || 0) - (parseInt(formData.fixed_costs) || 0) - (parseInt(formData.variable_costs) || 0);
+  const defaultCashBalance = (previousCashBalance || 0) + (parseInt(formData.monthly_revenue) || 0) - (parseInt(formData.fixed_costs) || 0) - (parseInt(formData.variable_costs) || 0);
+
+  // Update cash_balance default when revenue/costs change (only if user hasn't manually edited it)
+  const hasTouchedCashBalance = touchedFields.has("cash_balance");
+  useEffect(() => {
+    if (!isFirstReport && !hasTouchedCashBalance) {
+      setFormData(prev => ({ ...prev, cash_balance: String(defaultCashBalance) }));
+    }
+  }, [formData.monthly_revenue, formData.fixed_costs, formData.variable_costs, isFirstReport, defaultCashBalance, hasTouchedCashBalance]);
+
+  // Actual cash balance to submit (user input value)
+  const finalCashBalance = parseInt(formData.cash_balance) || 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,7 +255,7 @@ export default function SubmitReport() {
         p_cumulative_revenue: calculatedCumulativeRevenue,
         p_fixed_costs: parseInt(formData.fixed_costs) || 0,
         p_variable_costs: parseInt(formData.variable_costs) || 0,
-        p_cash_balance: calculatedCashBalance,
+        p_cash_balance: finalCashBalance,
         p_runway_months: parseInt(formData.runway_months) || 0,
         p_employee_count_change: parseInt(formData.employee_count_change) || 0,
         p_contract_count: formData.contract_count ? parseInt(formData.contract_count) : null,
@@ -495,34 +508,23 @@ export default function SubmitReport() {
                     <Label htmlFor="cash_balance">
                       현금 잔고 (원) {isFirstReport && <span className="text-destructive">*</span>}
                     </Label>
+                    <Input
+                      id="cash_balance"
+                      type="number"
+                      placeholder="0"
+                      value={formData.cash_balance}
+                      onChange={(e) => handleInputChange("cash_balance", e.target.value)}
+                      className={isFieldInvalid("cash_balance") ? "border-destructive" : ""}
+                    />
+                    {isFieldInvalid("cash_balance") && (
+                      <p className="text-xs text-destructive">필수 항목입니다</p>
+                    )}
                     {isFirstReport ? (
-                      <>
-                        <Input
-                          id="cash_balance"
-                          type="number"
-                          placeholder="0"
-                          value={formData.cash_balance}
-                          onChange={(e) => handleInputChange("cash_balance", e.target.value)}
-                          className={isFieldInvalid("cash_balance") ? "border-destructive" : ""}
-                        />
-                        {isFieldInvalid("cash_balance") && (
-                          <p className="text-xs text-destructive">필수 항목입니다</p>
-                        )}
-                        <p className="text-xs text-muted-foreground">첫 보고서에서만 직접 입력합니다</p>
-                      </>
+                      <p className="text-xs text-muted-foreground">첫 보고서에서는 직접 입력해주세요</p>
                     ) : (
-                      <>
-                        <Input
-                          id="cash_balance"
-                          type="number"
-                          value={calculatedCashBalance}
-                          disabled
-                          className="bg-muted"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          자동 계산: 전달 잔고({previousCashBalance?.toLocaleString()}원) + 월 매출 - 고정비 - 변동비
-                        </p>
-                      </>
+                      <p className="text-xs text-muted-foreground">
+                        기본값: 전달 잔고({previousCashBalance?.toLocaleString()}원) + 월 매출 - 고정비 - 변동비
+                      </p>
                     )}
                   </div>
 
