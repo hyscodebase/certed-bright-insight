@@ -265,7 +265,7 @@ export default function FundDetail() {
               <TableBody>
                 {investees && investees.filter((inv) => assignedIds.has(inv.id)).length > 0 ? (
                   investees.filter((inv) => assignedIds.has(inv.id)).map((inv) => (
-                    <TableRow key={inv.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/investees/${inv.id}`)}>
+                    <TableRow key={inv.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/company/${inv.id}`)}>
                       <TableCell className="pl-6 font-medium">{inv.company_name}</TableCell>
                       <TableCell className="text-muted-foreground">{inv.representative || "-"}</TableCell>
                       <TableCell className="text-muted-foreground">{inv.contact_email || "-"}</TableCell>

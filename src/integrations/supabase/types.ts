@@ -128,7 +128,7 @@ export type Database = {
           industry: string | null
           investment_stage: string | null
           is_smb: boolean | null
-          report_fields: string[]
+          report_fields: Json
           report_frequency: string
           representative: string | null
           resign_count: number | null
@@ -150,7 +150,7 @@ export type Database = {
           industry?: string | null
           investment_stage?: string | null
           is_smb?: boolean | null
-          report_fields?: string[]
+          report_fields?: Json
           report_frequency?: string
           representative?: string | null
           resign_count?: number | null
@@ -172,7 +172,7 @@ export type Database = {
           industry?: string | null
           investment_stage?: string | null
           is_smb?: boolean | null
-          report_fields?: string[]
+          report_fields?: Json
           report_frequency?: string
           representative?: string | null
           resign_count?: number | null
