@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Briefcase, Search, TrendingUp, DollarSign, RefreshCw, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +50,7 @@ export default function FundDetail() {
   const addInvestee = useAddInvesteeToFund();
   const removeInvestee = useRemoveInvesteeFromFund();
   const [search, setSearch] = useState("");
+  const [editMode, setEditMode] = useState(false);
 
   const fund = funds?.find((f) => f.id === fundId);
   const assignedIds = useMemo(
@@ -170,60 +172,101 @@ export default function FundDetail() {
         </Card>
       </div>
 
-      {/* Investee Selection Table */}
+      {/* Investee Table */}
       <Card className="animate-fade-in border-border shadow-sm">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-medium">피투자사 관리</CardTitle>
-            <Badge variant="secondary">{assignedIds.size}개 선택됨</Badge>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-base font-medium">소속 피투자사</CardTitle>
+              {!editMode && <Badge variant="secondary">{assignedIds.size}개</Badge>}
+            </div>
+            <Button size="sm" variant={editMode ? "default" : "outline"} onClick={() => setEditMode(!editMode)}>
+              {editMode ? "완료" : "편집"}
+            </Button>
           </div>
-          <div className="relative mt-3">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="기업명, 이메일, 대표자로 검색..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+          {editMode && (
+            <div className="relative mt-3">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="기업명, 이메일, 대표자로 검색..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-t">
-                <TableHead className="w-[50px] pl-6 font-medium text-foreground">선택</TableHead>
-                <TableHead className="font-medium text-foreground">기업명</TableHead>
-                <TableHead className="font-medium text-foreground">대표자</TableHead>
-                <TableHead className="font-medium text-foreground">담당자 이메일</TableHead>
-                <TableHead className="font-medium text-foreground">보고 주기</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24">
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-3/4" />
-                    </div>
-                  </TableCell>
+          {editMode ? (
+            /* Edit mode: show all investees with checkboxes */
+            <Table>
+              <TableHeader>
+                <TableRow className="border-t">
+                  <TableHead className="w-[80px] whitespace-nowrap pl-6 font-medium text-foreground">선택</TableHead>
+                  <TableHead className="font-medium text-foreground">기업명</TableHead>
+                  <TableHead className="font-medium text-foreground">대표자</TableHead>
+                  <TableHead className="font-medium text-foreground">담당자 이메일</TableHead>
+                  <TableHead className="font-medium text-foreground">보고 주기</TableHead>
                 </TableRow>
-              ) : filteredInvestees.length > 0 ? (
-                filteredInvestees.map((inv) => {
-                  const isAssigned = assignedIds.has(inv.id);
-                  return (
-                    <TableRow
-                      key={inv.id}
-                      className={`cursor-pointer transition-colors hover:bg-muted/50 ${isAssigned ? "bg-primary/5" : ""}`}
-                      onClick={() => handleToggle(inv.id, !isAssigned)}
-                    >
-                      <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={isAssigned}
-                          onCheckedChange={(val) => handleToggle(inv.id, !!val)}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">{inv.company_name}</TableCell>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24">
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-3/4" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredInvestees.length > 0 ? (
+                  filteredInvestees.map((inv) => {
+                    const isAssigned = assignedIds.has(inv.id);
+                    return (
+                      <TableRow
+                        key={inv.id}
+                        className={`cursor-pointer transition-colors hover:bg-muted/50 ${isAssigned ? "bg-primary/5" : ""}`}
+                        onClick={() => handleToggle(inv.id, !isAssigned)}
+                      >
+                        <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox checked={isAssigned} onCheckedChange={(val) => handleToggle(inv.id, !!val)} />
+                        </TableCell>
+                        <TableCell className="font-medium">{inv.company_name}</TableCell>
+                        <TableCell className="text-muted-foreground">{inv.representative || "-"}</TableCell>
+                        <TableCell className="text-muted-foreground">{inv.contact_email || "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {FREQUENCY_LABELS[inv.report_frequency] || "월간"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                      {search ? "검색 결과가 없습니다." : "등록된 피투자사가 없습니다."}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          ) : (
+            /* View mode: show only assigned investees */
+            <Table>
+              <TableHeader>
+                <TableRow className="border-t">
+                  <TableHead className="pl-6 font-medium text-foreground">기업명</TableHead>
+                  <TableHead className="font-medium text-foreground">대표자</TableHead>
+                  <TableHead className="font-medium text-foreground">담당자 이메일</TableHead>
+                  <TableHead className="font-medium text-foreground">보고 주기</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {investees && investees.filter((inv) => assignedIds.has(inv.id)).length > 0 ? (
+                  investees.filter((inv) => assignedIds.has(inv.id)).map((inv) => (
+                    <TableRow key={inv.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/investees/${inv.id}`)}>
+                      <TableCell className="pl-6 font-medium">{inv.company_name}</TableCell>
                       <TableCell className="text-muted-foreground">{inv.representative || "-"}</TableCell>
                       <TableCell className="text-muted-foreground">{inv.contact_email || "-"}</TableCell>
                       <TableCell>
@@ -232,17 +275,17 @@ export default function FundDetail() {
                         </Badge>
                       </TableCell>
                     </TableRow>
-                  );
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                    {search ? "검색 결과가 없습니다." : "등록된 피투자사가 없습니다."}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                      소속된 피투자사가 없습니다. 편집 버튼을 눌러 피투자사를 배정하세요.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </DashboardLayout>

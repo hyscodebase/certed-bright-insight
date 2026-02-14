@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { Building2, TrendingUp, DollarSign, RefreshCw, FileText, Send, Loader2, Briefcase, Plus, Pencil, X } from "lucide-react";
+import { Building2, TrendingUp, DollarSign, RefreshCw, FileText, Send, Loader2, Briefcase, Plus, Pencil } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip,
 } from "recharts";
@@ -57,6 +58,7 @@ export default function CompanyDetail() {
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
   const [fundFormOpen, setFundFormOpen] = useState(false);
   const [editingFund, setEditingFund] = useState<Fund | null>(null);
+  const [fundEditMode, setFundEditMode] = useState(false);
 
   // Fund management
   const { data: funds } = useFunds();
@@ -232,40 +234,89 @@ export default function CompanyDetail() {
             <div className="flex items-center gap-2">
               <Briefcase className="h-5 w-5 text-muted-foreground" />
               <CardTitle className="text-base font-medium">소속 펀드</CardTitle>
+              {!fundEditMode && <Badge variant="secondary">{assignedFundIds.size}개</Badge>}
             </div>
-            <Button size="sm" variant="outline" className="gap-1" onClick={() => { setEditingFund(null); setFundFormOpen(true); }}>
-              <Plus className="h-3.5 w-3.5" />
-              펀드 생성
-            </Button>
+            <div className="flex items-center gap-2">
+              {fundEditMode && (
+                <Button size="sm" variant="outline" className="gap-1" onClick={() => { setEditingFund(null); setFundFormOpen(true); }}>
+                  <Plus className="h-3.5 w-3.5" />
+                  펀드 생성
+                </Button>
+              )}
+              <Button size="sm" variant={fundEditMode ? "default" : "outline"} onClick={() => setFundEditMode(!fundEditMode)}>
+                {fundEditMode ? "완료" : "편집"}
+              </Button>
+            </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {funds && funds.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {funds.map((fund) => {
-                const isAssigned = assignedFundIds.has(fund.id);
-                return (
-                  <div key={fund.id} className="flex items-center gap-1">
-                    <Badge
-                      variant={isAssigned ? "default" : "outline"}
-                      className={`cursor-pointer transition-colors ${isAssigned ? "" : "opacity-50 hover:opacity-80"}`}
+        <CardContent className="p-0">
+          {fundEditMode ? (
+            /* Edit mode: show all funds with checkboxes */
+            <Table>
+              <TableHeader>
+                <TableRow className="border-t">
+                  <TableHead className="w-[80px] whitespace-nowrap pl-6 font-medium text-foreground">선택</TableHead>
+                  <TableHead className="font-medium text-foreground">펀드명</TableHead>
+                  <TableHead className="font-medium text-foreground">설명</TableHead>
+                  <TableHead className="w-[60px] font-medium text-foreground"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {funds && funds.length > 0 ? funds.map((fund) => {
+                  const isAssigned = assignedFundIds.has(fund.id);
+                  return (
+                    <TableRow
+                      key={fund.id}
+                      className={`cursor-pointer transition-colors hover:bg-muted/50 ${isAssigned ? "bg-primary/5" : ""}`}
                       onClick={() => handleToggleFund(fund.id)}
                     >
-                      {fund.name}
-                      {isAssigned && <X className="ml-1 h-3 w-3" />}
-                    </Badge>
-                    <button
-                      className="rounded p-0.5 text-muted-foreground hover:text-foreground"
-                      onClick={() => { setEditingFund(fund); setFundFormOpen(true); }}
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+                      <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox checked={isAssigned} onCheckedChange={() => handleToggleFund(fund.id)} />
+                      </TableCell>
+                      <TableCell className="font-medium">{fund.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{fund.description || "-"}</TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingFund(fund); setFundFormOpen(true); }}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                }) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                      등록된 펀드가 없습니다. 펀드를 먼저 생성해 주세요.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           ) : (
-            <p className="text-sm text-muted-foreground">등록된 펀드가 없습니다. 펀드를 먼저 생성해 주세요.</p>
+            /* View mode: show only assigned funds */
+            <Table>
+              <TableHeader>
+                <TableRow className="border-t">
+                  <TableHead className="pl-6 font-medium text-foreground">펀드명</TableHead>
+                  <TableHead className="font-medium text-foreground">설명</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {funds && funds.filter((f) => assignedFundIds.has(f.id)).length > 0 ? (
+                  funds.filter((f) => assignedFundIds.has(f.id)).map((fund) => (
+                    <TableRow key={fund.id}>
+                      <TableCell className="pl-6 font-medium">{fund.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{fund.description || "-"}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
+                      소속된 펀드가 없습니다. 편집 버튼을 눌러 펀드를 배정하세요.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
