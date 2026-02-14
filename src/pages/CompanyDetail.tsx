@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import { Building2, TrendingUp, DollarSign, RefreshCw, FileText, Send, Loader2, Briefcase, Plus, Pencil } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,8 +86,6 @@ export default function CompanyDetail() {
   const [reportFieldsEditMode, setReportFieldsEditMode] = useState(false);
   const queryClient = useQueryClient();
 
-  const [selectedFrequencyTab, setSelectedFrequencyTab] = useState<string>(company?.report_frequency || "monthly");
-
   const reportFieldsConfig = useMemo((): ReportFieldsConfig => {
     const raw = (company as any)?.report_fields;
     if (raw && typeof raw === "object" && !Array.isArray(raw)) {
@@ -102,19 +101,27 @@ export default function CompanyDetail() {
     };
   }, [(company as any)?.report_fields]);
 
+  // Enabled frequencies = keys present in reportFieldsConfig
+  const enabledFrequencies = useMemo(() => {
+    return new Set(Object.keys(reportFieldsConfig));
+  }, [reportFieldsConfig]);
+
+  const [selectedFrequencyTab, setSelectedFrequencyTab] = useState<string>("");
+
+  // Auto-select first enabled tab
+  const activeFrequencyTab = useMemo(() => {
+    const enabledArr = FREQUENCY_OPTIONS.filter(f => enabledFrequencies.has(f.key));
+    if (selectedFrequencyTab && enabledFrequencies.has(selectedFrequencyTab)) return selectedFrequencyTab;
+    return enabledArr[0]?.key || "monthly";
+  }, [selectedFrequencyTab, enabledFrequencies]);
+
   const getFieldsForFrequency = (freq: string): Set<string> => {
     return new Set<string>(reportFieldsConfig[freq] ?? ALL_FIELD_KEYS);
   };
 
   const currentFrequencyFields = useMemo(
-    () => getFieldsForFrequency(selectedFrequencyTab),
-    [selectedFrequencyTab, reportFieldsConfig]
-  );
-
-  // Fields for the investee's own frequency (used for request dialog default)
-  const currentReportFields = useMemo(
-    () => getFieldsForFrequency(company?.report_frequency || "monthly"),
-    [company?.report_frequency, reportFieldsConfig]
+    () => getFieldsForFrequency(activeFrequencyTab),
+    [activeFrequencyTab, reportFieldsConfig]
   );
 
   const updateReportFields = useMutation({
@@ -132,8 +139,26 @@ export default function CompanyDetail() {
     },
   });
 
+  const handleToggleFrequency = useCallback((freqKey: string) => {
+    const newConfig = { ...reportFieldsConfig };
+    if (newConfig[freqKey]) {
+      // Don't allow disabling all frequencies
+      if (Object.keys(newConfig).length <= 1) {
+        toast({ title: "최소 1개의 보고 주기를 선택해야 합니다.", variant: "destructive" });
+        return;
+      }
+      delete newConfig[freqKey];
+      if (activeFrequencyTab === freqKey) {
+        setSelectedFrequencyTab(Object.keys(newConfig)[0] || "monthly");
+      }
+    } else {
+      newConfig[freqKey] = [...ALL_FIELD_KEYS];
+    }
+    updateReportFields.mutate(newConfig);
+  }, [reportFieldsConfig, activeFrequencyTab, updateReportFields]);
+
   const handleToggleReportField = useCallback((fieldKey: string) => {
-    const currentFields = new Set(reportFieldsConfig[selectedFrequencyTab] ?? ALL_FIELD_KEYS);
+    const currentFields = new Set(reportFieldsConfig[activeFrequencyTab] ?? ALL_FIELD_KEYS);
     if (currentFields.has(fieldKey)) {
       currentFields.delete(fieldKey);
     } else {
@@ -141,9 +166,9 @@ export default function CompanyDetail() {
     }
     updateReportFields.mutate({
       ...reportFieldsConfig,
-      [selectedFrequencyTab]: Array.from(currentFields),
+      [activeFrequencyTab]: Array.from(currentFields),
     });
-  }, [reportFieldsConfig, selectedFrequencyTab, updateReportFields]);
+  }, [reportFieldsConfig, activeFrequencyTab, updateReportFields]);
 
   // Fund management
   const { data: funds } = useFunds();
@@ -423,14 +448,39 @@ export default function CompanyDetail() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Frequency tabs */}
+          {/* Frequency selection */}
+          {reportFieldsEditMode && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">보고 주기 선택</Label>
+              <div className="flex flex-wrap gap-2">
+                {FREQUENCY_OPTIONS.map((freq) => (
+                  <div
+                    key={freq.key}
+                    className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer transition-colors ${
+                      enabledFrequencies.has(freq.key) ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                    }`}
+                    onClick={() => handleToggleFrequency(freq.key)}
+                  >
+                    <Checkbox
+                      checked={enabledFrequencies.has(freq.key)}
+                      onCheckedChange={() => handleToggleFrequency(freq.key)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <span className="text-sm font-medium">{freq.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Frequency tabs (only enabled ones) */}
           <div className="flex gap-1 rounded-lg border p-1">
-            {FREQUENCY_OPTIONS.map((freq) => (
+            {FREQUENCY_OPTIONS.filter(f => enabledFrequencies.has(f.key)).map((freq) => (
               <button
                 key={freq.key}
                 onClick={() => setSelectedFrequencyTab(freq.key)}
                 className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                  selectedFrequencyTab === freq.key
+                  activeFrequencyTab === freq.key
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:bg-muted"
                 }`}
@@ -709,8 +759,8 @@ export default function CompanyDetail() {
         companyName={company.company_name}
         onConfirm={handleRequestReport}
         isLoading={isSendingRequest}
-        reportFrequency={company.report_frequency || "monthly"}
-        defaultReportFields={Array.from(currentReportFields)}
+        enabledFrequencies={Array.from(enabledFrequencies)}
+        reportFieldsConfig={reportFieldsConfig}
       />
 
       <FundFormDialog

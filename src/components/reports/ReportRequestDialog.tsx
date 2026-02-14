@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Send, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -12,14 +12,21 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
+const FREQUENCY_OPTIONS = [
+  { key: "monthly", label: "월간" },
+  { key: "quarterly", label: "분기" },
+  { key: "semi_annual", label: "반기" },
+  { key: "annual", label: "연간" },
+] as const;
+
 interface ReportRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   companyName: string;
   onConfirm: (periods: Array<{ period: string; reportFields: string[] }>) => Promise<void>;
   isLoading: boolean;
-  reportFrequency?: string;
-  defaultReportFields?: string[];
+  enabledFrequencies: string[];
+  reportFieldsConfig: Record<string, string[]>;
 }
 
 function generateMonthOptions(): Array<{ value: string; label: string }> {
@@ -100,13 +107,38 @@ export function ReportRequestDialog({
   companyName,
   onConfirm,
   isLoading,
-  reportFrequency = "monthly",
-  defaultReportFields,
+  enabledFrequencies,
+  reportFieldsConfig,
 }: ReportRequestDialogProps) {
-  const periodOptions = getOptionsForFrequency(reportFrequency);
-  const frequencyLabel = getFrequencyLabel(reportFrequency);
+  const availableFrequencies = useMemo(
+    () => FREQUENCY_OPTIONS.filter(f => enabledFrequencies.includes(f.key)),
+    [enabledFrequencies]
+  );
 
-  const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set([periodOptions[0].value]));
+  const [selectedFrequency, setSelectedFrequency] = useState<string>(availableFrequencies[0]?.key || "monthly");
+
+  const periodOptions = useMemo(() => getOptionsForFrequency(selectedFrequency), [selectedFrequency]);
+  const frequencyLabel = getFrequencyLabel(selectedFrequency);
+
+  const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set());
+
+  // Reset selected periods when frequency changes
+  const handleFrequencyChange = (freq: string) => {
+    setSelectedFrequency(freq);
+    const opts = getOptionsForFrequency(freq);
+    setSelectedPeriods(new Set([opts[0]?.value].filter(Boolean)));
+  };
+
+  // Initialize on open
+  const handleOpenChange = (newOpen: boolean) => {
+    if (newOpen) {
+      const freq = availableFrequencies[0]?.key || "monthly";
+      setSelectedFrequency(freq);
+      const opts = getOptionsForFrequency(freq);
+      setSelectedPeriods(new Set([opts[0]?.value].filter(Boolean)));
+    }
+    onOpenChange(newOpen);
+  };
 
   const handleTogglePeriod = (period: string) => {
     setSelectedPeriods(prev => {
@@ -121,9 +153,10 @@ export function ReportRequestDialog({
   };
 
   const handleConfirm = async () => {
+    const fields = reportFieldsConfig[selectedFrequency] ?? [];
     const periods = Array.from(selectedPeriods).map(period => ({
       period,
-      reportFields: defaultReportFields ?? [],
+      reportFields: fields,
     }));
     await onConfirm(periods);
   };
@@ -131,7 +164,7 @@ export function ReportRequestDialog({
   const selectedCount = selectedPeriods.size;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>주주보고서 작성 요청</DialogTitle>
@@ -141,6 +174,29 @@ export function ReportRequestDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Frequency selector */}
+          {availableFrequencies.length > 1 && (
+            <div className="space-y-2">
+              <Label>보고 주기</Label>
+              <div className="flex gap-1 rounded-lg border p-1">
+                {availableFrequencies.map((freq) => (
+                  <button
+                    key={freq.key}
+                    onClick={() => handleFrequencyChange(freq.key)}
+                    className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                      selectedFrequency === freq.key
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {freq.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Period selection */}
           <div className="space-y-2">
             <Label>보고 {frequencyLabel} 선택 ({selectedCount}개)</Label>
             <div className="space-y-1 max-h-[300px] overflow-y-auto rounded-md border p-2">
