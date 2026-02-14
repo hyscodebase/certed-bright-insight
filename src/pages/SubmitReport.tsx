@@ -51,20 +51,20 @@ const initialFormData: ReportFormData = {
   cac: "",
 };
 
-type RequiredField = 
-  | "monthly_summary"
-  | "problems_risks"
-  | "next_month_decisions"
-  | "shareholder_input_needed"
-  | "monthly_revenue"
-  | "fixed_costs"
-  | "variable_costs"
-  | "cash_balance"
-  | "runway_months"
-  | "employee_count_change";
+type RequiredField = keyof ReportFormData;
 
-// Required fields are dynamically determined based on whether this is the first report
-const getRequiredFields = (isFirstReport: boolean): { key: RequiredField; label: string }[] => {
+const OPTIONAL_FIELD_LABELS: Record<string, string> = {
+  contract_count: "계약 수",
+  paid_customer_count: "유료 고객 수",
+  average_contract_value: "평균 계약 단가",
+  mau: "MAU",
+  dau: "DAU",
+  conversion_rate: "전환율",
+  cac: "CAC",
+};
+
+// Required fields are dynamically determined based on whether this is the first report + enabled optional fields
+const getRequiredFields = (isFirstReport: boolean, enabledOptional: Set<string>): { key: RequiredField; label: string }[] => {
   const baseFields: { key: RequiredField; label: string }[] = [
     { key: "monthly_summary", label: "이번 달 한 줄 요약" },
     { key: "problems_risks", label: "문제/리스크" },
@@ -77,9 +77,15 @@ const getRequiredFields = (isFirstReport: boolean): { key: RequiredField; label:
     { key: "employee_count_change", label: "인원 수 변화" },
   ];
   
-  // Only require cash_balance for the first report
   if (isFirstReport) {
     baseFields.push({ key: "cash_balance", label: "현금 잔고" });
+  }
+
+  // Add enabled optional fields as required
+  for (const fieldKey of enabledOptional) {
+    if (OPTIONAL_FIELD_LABELS[fieldKey]) {
+      baseFields.push({ key: fieldKey as RequiredField, label: OPTIONAL_FIELD_LABELS[fieldKey] });
+    }
   }
   
   return baseFields;
@@ -216,7 +222,7 @@ export default function SubmitReport() {
     setTouchedFields((prev) => new Set(prev).add(field));
   };
 
-  const requiredFields = getRequiredFields(isFirstReport);
+  const requiredFields = getRequiredFields(isFirstReport, enabledOptionalFields);
 
   const getMissingRequiredFields = (): string[] => {
     return requiredFields
@@ -597,101 +603,117 @@ export default function SubmitReport() {
                 </div>
               </div>
 
-              {/* Optional Fields Section */}
+              {/* KPI Fields Section - only enabled fields, all required */}
               {enabledOptionalFields.size > 0 && (
               <div className="space-y-6">
-                <h3 className="text-base font-semibold text-foreground">선택 항목</h3>
+                <h3 className="text-base font-semibold text-foreground">
+                  KPI 항목 <span className="text-destructive">*</span>
+                </h3>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   {enabledOptionalFields.has("contract_count") && (
                   <div className="space-y-2">
-                    <Label htmlFor="contract_count">계약 수</Label>
+                    <Label htmlFor="contract_count">계약 수 <span className="text-destructive">*</span></Label>
                     <Input
                       id="contract_count"
                       type="number"
-                      placeholder="선택 입력"
+                      placeholder="0"
                       value={formData.contract_count}
                       onChange={(e) => handleInputChange("contract_count", e.target.value)}
+                      className={isFieldInvalid("contract_count") ? "border-destructive" : ""}
                     />
+                    {isFieldInvalid("contract_count") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
                   )}
 
                   {enabledOptionalFields.has("paid_customer_count") && (
                   <div className="space-y-2">
-                    <Label htmlFor="paid_customer_count">유료 고객 수</Label>
+                    <Label htmlFor="paid_customer_count">유료 고객 수 <span className="text-destructive">*</span></Label>
                     <Input
                       id="paid_customer_count"
                       type="number"
-                      placeholder="선택 입력"
+                      placeholder="0"
                       value={formData.paid_customer_count}
                       onChange={(e) => handleInputChange("paid_customer_count", e.target.value)}
+                      className={isFieldInvalid("paid_customer_count") ? "border-destructive" : ""}
                     />
+                    {isFieldInvalid("paid_customer_count") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
                   )}
 
                   {enabledOptionalFields.has("average_contract_value") && (
                   <div className="space-y-2">
-                    <Label htmlFor="average_contract_value">평균 계약 단가 (원)</Label>
+                    <Label htmlFor="average_contract_value">평균 계약 단가 (원) <span className="text-destructive">*</span></Label>
                     <Input
                       id="average_contract_value"
                       type="number"
-                      placeholder="선택 입력"
+                      placeholder="0"
                       value={formData.average_contract_value}
                       onChange={(e) => handleInputChange("average_contract_value", e.target.value)}
+                      className={isFieldInvalid("average_contract_value") ? "border-destructive" : ""}
                     />
+                    {isFieldInvalid("average_contract_value") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
                   )}
 
                   {enabledOptionalFields.has("mau") && (
                   <div className="space-y-2">
-                    <Label htmlFor="mau">MAU</Label>
+                    <Label htmlFor="mau">MAU <span className="text-destructive">*</span></Label>
                     <Input
                       id="mau"
                       type="number"
-                      placeholder="선택 입력"
+                      placeholder="0"
                       value={formData.mau}
                       onChange={(e) => handleInputChange("mau", e.target.value)}
+                      className={isFieldInvalid("mau") ? "border-destructive" : ""}
                     />
+                    {isFieldInvalid("mau") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
                   )}
 
                   {enabledOptionalFields.has("dau") && (
                   <div className="space-y-2">
-                    <Label htmlFor="dau">DAU</Label>
+                    <Label htmlFor="dau">DAU <span className="text-destructive">*</span></Label>
                     <Input
                       id="dau"
                       type="number"
-                      placeholder="선택 입력"
+                      placeholder="0"
                       value={formData.dau}
                       onChange={(e) => handleInputChange("dau", e.target.value)}
+                      className={isFieldInvalid("dau") ? "border-destructive" : ""}
                     />
+                    {isFieldInvalid("dau") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
                   )}
 
                   {enabledOptionalFields.has("conversion_rate") && (
                   <div className="space-y-2">
-                    <Label htmlFor="conversion_rate">전환율 (%)</Label>
+                    <Label htmlFor="conversion_rate">전환율 (%) <span className="text-destructive">*</span></Label>
                     <Input
                       id="conversion_rate"
                       type="number"
                       step="0.01"
-                      placeholder="선택 입력"
+                      placeholder="0"
                       value={formData.conversion_rate}
                       onChange={(e) => handleInputChange("conversion_rate", e.target.value)}
+                      className={isFieldInvalid("conversion_rate") ? "border-destructive" : ""}
                     />
+                    {isFieldInvalid("conversion_rate") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
                   )}
 
                   {enabledOptionalFields.has("cac") && (
                   <div className="space-y-2">
-                    <Label htmlFor="cac">CAC (원)</Label>
+                    <Label htmlFor="cac">CAC (원) <span className="text-destructive">*</span></Label>
                     <Input
                       id="cac"
                       type="number"
-                      placeholder="선택 입력"
+                      placeholder="0"
                       value={formData.cac}
                       onChange={(e) => handleInputChange("cac", e.target.value)}
+                      className={isFieldInvalid("cac") ? "border-destructive" : ""}
                     />
+                    {isFieldInvalid("cac") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
                   )}
                 </div>
