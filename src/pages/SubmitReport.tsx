@@ -409,6 +409,9 @@ export default function SubmitReport() {
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Required Fields Section */}
               <div className="space-y-6">
+                <h3 className="text-base font-semibold text-foreground">
+                  필수 항목 <span className="text-destructive">*</span>
+                </h3>
 
                 <div className="space-y-4">
                   <div className="space-y-2">
@@ -603,6 +606,9 @@ export default function SubmitReport() {
               {/* KPI Fields Section - only enabled fields, all required */}
               {enabledOptionalFields.size > 0 && (
               <div className="space-y-6">
+                <h3 className="text-base font-semibold text-foreground">
+                  KPI 항목 <span className="text-destructive">*</span>
+                </h3>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   {enabledOptionalFields.has("contract_count") && (
