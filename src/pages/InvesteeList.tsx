@@ -54,7 +54,7 @@ export default function InvesteeList() {
     id: string;
     companyName: string;
     contactEmail: string | null;
-    reportFrequency: string;
+    reportFields: Record<string, string[]>;
   } | null>(null);
 
   const { data: investorProfile } = useQuery({
@@ -91,14 +91,18 @@ export default function InvesteeList() {
     investeeId: string,
     companyName: string,
     contactEmail: string | null,
-    reportFrequency: string
+    reportFields: any
   ) => {
     e.stopPropagation();
     if (!contactEmail) {
       toast({ title: "이메일 주소 없음", description: "피투자사의 담당자 이메일이 등록되어 있지 않습니다.", variant: "destructive" });
       return;
     }
-    setSelectedInvestee({ id: investeeId, companyName, contactEmail, reportFrequency });
+    // Parse report_fields into config
+    const config: Record<string, string[]> = (reportFields && typeof reportFields === "object" && !Array.isArray(reportFields))
+      ? reportFields
+      : { monthly: [], quarterly: [], semi_annual: [], annual: [] };
+    setSelectedInvestee({ id: investeeId, companyName, contactEmail, reportFields: config });
     setDialogOpen(true);
   };
 
@@ -223,7 +227,7 @@ export default function InvesteeList() {
                         className="gap-1.5"
                         disabled={sendingId === company.id}
                         onClick={(e) =>
-                          handleOpenRequestDialog(e, company.id, company.company_name, company.contact_email, company.report_frequency || "monthly")
+                          handleOpenRequestDialog(e, company.id, company.company_name, company.contact_email, (company as any).report_fields)
                         }
                       >
                         {sendingId === company.id ? (
@@ -266,7 +270,8 @@ export default function InvesteeList() {
           companyName={selectedInvestee.companyName}
           onConfirm={handleConfirmRequest}
           isLoading={sendingId === selectedInvestee.id}
-          reportFrequency={selectedInvestee.reportFrequency}
+          enabledFrequencies={Object.keys(selectedInvestee.reportFields)}
+          reportFieldsConfig={selectedInvestee.reportFields}
         />
       )}
     </DashboardLayout>
