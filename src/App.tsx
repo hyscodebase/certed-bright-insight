@@ -12,6 +12,7 @@ import AddInvestee from "./pages/AddInvestee";
 import InvesteeList from "./pages/InvesteeList";
 import CompanyDetail from "./pages/CompanyDetail";
 import Profile from "./pages/Profile";
+import FundList from "./pages/FundList";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import SubmitReport from "./pages/SubmitReport";
 import NotFound from "./pages/NotFound";
@@ -57,6 +58,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CompanyDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/funds"
+              element={
+                <ProtectedRoute>
+                  <FundList />
                 </ProtectedRoute>
               }
             />

@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      fund_investees: {
+        Row: {
+          created_at: string
+          fund_id: string
+          id: string
+          investee_id: string
+        }
+        Insert: {
+          created_at?: string
+          fund_id: string
+          id?: string
+          investee_id: string
+        }
+        Update: {
+          created_at?: string
+          fund_id?: string
+          id?: string
+          investee_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fund_investees_fund_id_fkey"
+            columns: ["fund_id"]
+            isOneToOne: false
+            referencedRelation: "funds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fund_investees_investee_id_fkey"
+            columns: ["investee_id"]
+            isOneToOne: false
+            referencedRelation: "investees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funds: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       investee_invitations: {
         Row: {
           accepted_at: string | null
@@ -65,6 +128,7 @@ export type Database = {
           industry: string | null
           investment_stage: string | null
           is_smb: boolean | null
+          report_frequency: string
           representative: string | null
           resign_count: number | null
           total_investment: number | null
@@ -85,6 +149,7 @@ export type Database = {
           industry?: string | null
           investment_stage?: string | null
           is_smb?: boolean | null
+          report_frequency?: string
           representative?: string | null
           resign_count?: number | null
           total_investment?: number | null
@@ -105,6 +170,7 @@ export type Database = {
           industry?: string | null
           investment_stage?: string | null
           is_smb?: boolean | null
+          report_frequency?: string
           representative?: string | null
           resign_count?: number | null
           total_investment?: number | null

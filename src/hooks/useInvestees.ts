@@ -19,6 +19,7 @@ export interface Investee {
   contact_email: string | null;
   hire_count: number | null;
   resign_count: number | null;
+  report_frequency: string;
   created_at: string;
   updated_at: string;
 }
@@ -60,7 +61,7 @@ export function useCreateInvestee() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (data: { company_name: string; contact_email: string; representative?: string | null }) => {
+    mutationFn: async (data: { company_name: string; contact_email: string; representative?: string | null; report_frequency?: string }) => {
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) throw new Error("로그인이 필요합니다");
 
@@ -71,6 +72,7 @@ export function useCreateInvestee() {
           company_name: data.company_name,
           contact_email: data.contact_email,
           representative: data.representative,
+          report_frequency: data.report_frequency || "monthly",
         })
         .select()
         .single();
