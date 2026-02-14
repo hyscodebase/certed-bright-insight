@@ -36,6 +36,17 @@ const OPTIONAL_REPORT_FIELDS = [
   { key: "cac", label: "CAC" },
 ] as const;
 
+const ALL_FIELD_KEYS = OPTIONAL_REPORT_FIELDS.map(f => f.key);
+
+const FREQUENCY_OPTIONS = [
+  { key: "monthly", label: "월간" },
+  { key: "quarterly", label: "분기" },
+  { key: "semi_annual", label: "반기" },
+  { key: "annual", label: "연간" },
+] as const;
+
+type ReportFieldsConfig = Record<string, string[]>;
+
 function formatCurrency(amount: number | null): string {
   if (amount === null || amount === 0) return "정보 없음";
   if (amount >= 100000000) {
@@ -74,17 +85,44 @@ export default function CompanyDetail() {
   const [reportFieldsEditMode, setReportFieldsEditMode] = useState(false);
   const queryClient = useQueryClient();
 
-  const currentReportFields = useMemo(() => {
-    const fields = (company as any)?.report_fields as string[] | undefined;
-    return new Set<string>(fields ?? OPTIONAL_REPORT_FIELDS.map(f => f.key));
+  const [selectedFrequencyTab, setSelectedFrequencyTab] = useState<string>(company?.report_frequency || "monthly");
+
+  const reportFieldsConfig = useMemo((): ReportFieldsConfig => {
+    const raw = (company as any)?.report_fields;
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+      return raw as ReportFieldsConfig;
+    }
+    // Legacy: flat array or missing -> apply to all frequencies
+    const defaultFields = Array.isArray(raw) ? raw : [...ALL_FIELD_KEYS];
+    return {
+      monthly: defaultFields,
+      quarterly: defaultFields,
+      semi_annual: defaultFields,
+      annual: defaultFields,
+    };
   }, [(company as any)?.report_fields]);
 
+  const getFieldsForFrequency = (freq: string): Set<string> => {
+    return new Set<string>(reportFieldsConfig[freq] ?? ALL_FIELD_KEYS);
+  };
+
+  const currentFrequencyFields = useMemo(
+    () => getFieldsForFrequency(selectedFrequencyTab),
+    [selectedFrequencyTab, reportFieldsConfig]
+  );
+
+  // Fields for the investee's own frequency (used for request dialog default)
+  const currentReportFields = useMemo(
+    () => getFieldsForFrequency(company?.report_frequency || "monthly"),
+    [company?.report_frequency, reportFieldsConfig]
+  );
+
   const updateReportFields = useMutation({
-    mutationFn: async (fields: string[]) => {
+    mutationFn: async (newConfig: ReportFieldsConfig) => {
       if (!id) throw new Error("No investee id");
       const { error } = await supabase
         .from("investees")
-        .update({ report_fields: fields })
+        .update({ report_fields: newConfig } as any)
         .eq("id", id);
       if (error) throw error;
     },
@@ -95,14 +133,17 @@ export default function CompanyDetail() {
   });
 
   const handleToggleReportField = useCallback((fieldKey: string) => {
-    const newFields = new Set(currentReportFields);
-    if (newFields.has(fieldKey)) {
-      newFields.delete(fieldKey);
+    const currentFields = new Set(reportFieldsConfig[selectedFrequencyTab] ?? ALL_FIELD_KEYS);
+    if (currentFields.has(fieldKey)) {
+      currentFields.delete(fieldKey);
     } else {
-      newFields.add(fieldKey);
+      currentFields.add(fieldKey);
     }
-    updateReportFields.mutate(Array.from(newFields));
-  }, [currentReportFields, updateReportFields]);
+    updateReportFields.mutate({
+      ...reportFieldsConfig,
+      [selectedFrequencyTab]: Array.from(currentFields),
+    });
+  }, [reportFieldsConfig, selectedFrequencyTab, updateReportFields]);
 
   // Fund management
   const { data: funds } = useFunds();
@@ -381,7 +422,24 @@ export default function CompanyDetail() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Frequency tabs */}
+          <div className="flex gap-1 rounded-lg border p-1">
+            {FREQUENCY_OPTIONS.map((freq) => (
+              <button
+                key={freq.key}
+                onClick={() => setSelectedFrequencyTab(freq.key)}
+                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  selectedFrequencyTab === freq.key
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {freq.label}
+              </button>
+            ))}
+          </div>
+
           {reportFieldsEditMode ? (
             <Table>
               <TableHeader>
@@ -394,11 +452,11 @@ export default function CompanyDetail() {
                 {OPTIONAL_REPORT_FIELDS.map((field) => (
                   <TableRow
                     key={field.key}
-                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${currentReportFields.has(field.key) ? "bg-primary/5" : ""}`}
+                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${currentFrequencyFields.has(field.key) ? "bg-primary/5" : ""}`}
                     onClick={() => handleToggleReportField(field.key)}
                   >
                     <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox checked={currentReportFields.has(field.key)} onCheckedChange={() => handleToggleReportField(field.key)} />
+                      <Checkbox checked={currentFrequencyFields.has(field.key)} onCheckedChange={() => handleToggleReportField(field.key)} />
                     </TableCell>
                     <TableCell className="font-medium">{field.label}</TableCell>
                   </TableRow>
@@ -407,10 +465,10 @@ export default function CompanyDetail() {
             </Table>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {OPTIONAL_REPORT_FIELDS.filter(f => currentReportFields.has(f.key)).map((field) => (
+              {OPTIONAL_REPORT_FIELDS.filter(f => currentFrequencyFields.has(f.key)).map((field) => (
                 <Badge key={field.key} variant="secondary">{field.label}</Badge>
               ))}
-              {currentReportFields.size === 0 && (
+              {currentFrequencyFields.size === 0 && (
                 <p className="text-sm text-muted-foreground">선택된 항목이 없습니다.</p>
               )}
             </div>

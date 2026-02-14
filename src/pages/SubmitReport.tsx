@@ -117,7 +117,7 @@ export default function SubmitReport() {
           .from("report_requests")
           .select(`
             *,
-            investees (id, company_name, report_fields)
+            investees (id, company_name, report_fields, report_frequency)
           `)
           .eq("request_token", token)
           .maybeSingle();
@@ -146,8 +146,15 @@ export default function SubmitReport() {
         const requestFields = (data as any).report_fields;
         if (requestFields && Array.isArray(requestFields)) {
           setEnabledOptionalFields(new Set(requestFields));
-        } else if (investee?.report_fields && Array.isArray(investee.report_fields)) {
-          setEnabledOptionalFields(new Set(investee.report_fields));
+        } else if (investee?.report_fields) {
+          // Frequency-based config (jsonb object) or legacy flat array
+          const rf = investee.report_fields;
+          const freq = investee.report_frequency || "monthly";
+          if (typeof rf === "object" && !Array.isArray(rf) && rf[freq]) {
+            setEnabledOptionalFields(new Set(rf[freq]));
+          } else if (Array.isArray(rf)) {
+            setEnabledOptionalFields(new Set(rf));
+          }
         }
         
         // Use the requested report period, fallback to current month if not set
