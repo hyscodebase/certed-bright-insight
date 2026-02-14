@@ -34,8 +34,25 @@ const handler = async (req: Request): Promise<Response> => {
       const currentDate = new Date();
       return `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
     })();
-    const [year, month] = periodToUse.split("-");
-    const reportMonth = `${year}년 ${month}월`;
+
+    // Format period for display based on format
+    let reportMonth: string;
+    if (/^\d{4}-Q\d$/.test(periodToUse)) {
+      // Quarterly: "2026-Q1" -> "2026년 1분기"
+      const [year, q] = periodToUse.split("-Q");
+      reportMonth = `${year}년 ${q}분기`;
+    } else if (/^\d{4}-H\d$/.test(periodToUse)) {
+      // Semi-annual: "2026-H1" -> "2026년 상반기"
+      const [year, h] = periodToUse.split("-H");
+      reportMonth = `${year}년 ${h === "1" ? "상반기" : "하반기"}`;
+    } else if (/^\d{4}$/.test(periodToUse)) {
+      // Annual: "2026" -> "2026년"
+      reportMonth = `${periodToUse}년`;
+    } else {
+      // Monthly: "2026-02" -> "2026년 02월"
+      const [year, month] = periodToUse.split("-");
+      reportMonth = `${year}년 ${month}월`;
+    }
 
     const gmailUser = Deno.env.get("GMAIL_USER");
     const gmailPassword = Deno.env.get("GMAIL_APP_PASSWORD");
