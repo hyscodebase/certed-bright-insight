@@ -15,14 +15,26 @@ import {
 import { useInvestee } from "@/hooks/useInvestees";
 import { useShareholderReports, useCreateReportRequest, useSendReportRequestEmail, type ShareholderReport } from "@/hooks/useShareholderReports";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Settings2 } from "lucide-react";
 import { ReportDetailDialog } from "@/components/reports/ReportDetailDialog";
 import { ReportRequestDialog } from "@/components/reports/ReportRequestDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useFunds, useAllFundInvestees, useAddInvesteeToFund, useRemoveInvesteeFromFund, type Fund } from "@/hooks/useFunds";
 import { FundFormDialog } from "@/components/funds/FundFormDialog";
+
+const OPTIONAL_REPORT_FIELDS = [
+  { key: "contract_count", label: "계약 수" },
+  { key: "paid_customer_count", label: "유료 고객 수" },
+  { key: "average_contract_value", label: "평균 계약 단가" },
+  { key: "mau", label: "MAU" },
+  { key: "dau", label: "DAU" },
+  { key: "conversion_rate", label: "전환율" },
+  { key: "cac", label: "CAC" },
+] as const;
 
 function formatCurrency(amount: number | null): string {
   if (amount === null || amount === 0) return "정보 없음";
@@ -59,6 +71,38 @@ export default function CompanyDetail() {
   const [fundFormOpen, setFundFormOpen] = useState(false);
   const [editingFund, setEditingFund] = useState<Fund | null>(null);
   const [fundEditMode, setFundEditMode] = useState(false);
+  const [reportFieldsEditMode, setReportFieldsEditMode] = useState(false);
+  const queryClient = useQueryClient();
+
+  const currentReportFields = useMemo(() => {
+    const fields = (company as any)?.report_fields as string[] | undefined;
+    return new Set<string>(fields ?? OPTIONAL_REPORT_FIELDS.map(f => f.key));
+  }, [(company as any)?.report_fields]);
+
+  const updateReportFields = useMutation({
+    mutationFn: async (fields: string[]) => {
+      if (!id) throw new Error("No investee id");
+      const { error } = await supabase
+        .from("investees")
+        .update({ report_fields: fields })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["investee", id] });
+      toast({ title: "보고서 필드 설정이 저장되었습니다." });
+    },
+  });
+
+  const handleToggleReportField = useCallback((fieldKey: string) => {
+    const newFields = new Set(currentReportFields);
+    if (newFields.has(fieldKey)) {
+      newFields.delete(fieldKey);
+    } else {
+      newFields.add(fieldKey);
+    }
+    updateReportFields.mutate(Array.from(newFields));
+  }, [currentReportFields, updateReportFields]);
 
   // Fund management
   const { data: funds } = useFunds();
@@ -321,7 +365,57 @@ export default function CompanyDetail() {
         </CardContent>
       </Card>
 
-      {/* Latest Report Summary */}
+      {/* Report Field Settings */}
+      <Card className="mb-6 animate-fade-in border-border shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Settings2 className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-base font-medium">보고서 선택 항목 설정</CardTitle>
+            </div>
+            <Button size="sm" variant={reportFieldsEditMode ? "default" : "outline"} onClick={() => setReportFieldsEditMode(!reportFieldsEditMode)}>
+              {reportFieldsEditMode ? "완료" : "편집"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {reportFieldsEditMode ? (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-t">
+                  <TableHead className="w-[80px] whitespace-nowrap pl-6 font-medium text-foreground">포함</TableHead>
+                  <TableHead className="font-medium text-foreground">필드명</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {OPTIONAL_REPORT_FIELDS.map((field) => (
+                  <TableRow
+                    key={field.key}
+                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${currentReportFields.has(field.key) ? "bg-primary/5" : ""}`}
+                    onClick={() => handleToggleReportField(field.key)}
+                  >
+                    <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox checked={currentReportFields.has(field.key)} onCheckedChange={() => handleToggleReportField(field.key)} />
+                    </TableCell>
+                    <TableCell className="font-medium">{field.label}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {OPTIONAL_REPORT_FIELDS.filter(f => currentReportFields.has(f.key)).map((field) => (
+                <Badge key={field.key} variant="secondary">{field.label}</Badge>
+              ))}
+              {currentReportFields.size === 0 && (
+                <p className="text-sm text-muted-foreground">선택된 항목이 없습니다.</p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+
       {latestReport && (
         <Card className="mb-6 animate-fade-in border-border shadow-sm">
           <CardHeader className="pb-4">

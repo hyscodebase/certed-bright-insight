@@ -101,6 +101,9 @@ export default function SubmitReport() {
   const [isFirstReport, setIsFirstReport] = useState<boolean>(true);
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [showValidationErrors, setShowValidationErrors] = useState(false);
+  const [enabledOptionalFields, setEnabledOptionalFields] = useState<Set<string>>(
+    new Set(["contract_count", "paid_customer_count", "average_contract_value", "mau", "dau", "conversion_rate", "cac"])
+  );
 
   useEffect(() => {
     async function validateToken() {
@@ -114,7 +117,7 @@ export default function SubmitReport() {
           .from("report_requests")
           .select(`
             *,
-            investees (id, company_name)
+            investees (id, company_name, report_fields)
           `)
           .eq("request_token", token)
           .maybeSingle();
@@ -138,6 +141,11 @@ export default function SubmitReport() {
         const investee = data.investees as any;
         setCompanyName(investee?.company_name || "");
         setInvesteeId(investee?.id || "");
+        
+        // Set enabled optional fields from investee config
+        if (investee?.report_fields && Array.isArray(investee.report_fields)) {
+          setEnabledOptionalFields(new Set(investee.report_fields));
+        }
         
         // Use the requested report period, fallback to current month if not set
         if (data.report_period) {
@@ -565,10 +573,12 @@ export default function SubmitReport() {
               </div>
 
               {/* Optional Fields Section */}
+              {enabledOptionalFields.size > 0 && (
               <div className="space-y-6">
                 <h3 className="text-base font-semibold text-foreground">선택 항목</h3>
 
                 <div className="grid gap-4 sm:grid-cols-2">
+                  {enabledOptionalFields.has("contract_count") && (
                   <div className="space-y-2">
                     <Label htmlFor="contract_count">계약 수</Label>
                     <Input
@@ -579,7 +589,9 @@ export default function SubmitReport() {
                       onChange={(e) => handleInputChange("contract_count", e.target.value)}
                     />
                   </div>
+                  )}
 
+                  {enabledOptionalFields.has("paid_customer_count") && (
                   <div className="space-y-2">
                     <Label htmlFor="paid_customer_count">유료 고객 수</Label>
                     <Input
@@ -590,7 +602,9 @@ export default function SubmitReport() {
                       onChange={(e) => handleInputChange("paid_customer_count", e.target.value)}
                     />
                   </div>
+                  )}
 
+                  {enabledOptionalFields.has("average_contract_value") && (
                   <div className="space-y-2">
                     <Label htmlFor="average_contract_value">평균 계약 단가 (원)</Label>
                     <Input
@@ -601,7 +615,9 @@ export default function SubmitReport() {
                       onChange={(e) => handleInputChange("average_contract_value", e.target.value)}
                     />
                   </div>
+                  )}
 
+                  {enabledOptionalFields.has("mau") && (
                   <div className="space-y-2">
                     <Label htmlFor="mau">MAU</Label>
                     <Input
@@ -612,7 +628,9 @@ export default function SubmitReport() {
                       onChange={(e) => handleInputChange("mau", e.target.value)}
                     />
                   </div>
+                  )}
 
+                  {enabledOptionalFields.has("dau") && (
                   <div className="space-y-2">
                     <Label htmlFor="dau">DAU</Label>
                     <Input
@@ -623,7 +641,9 @@ export default function SubmitReport() {
                       onChange={(e) => handleInputChange("dau", e.target.value)}
                     />
                   </div>
+                  )}
 
+                  {enabledOptionalFields.has("conversion_rate") && (
                   <div className="space-y-2">
                     <Label htmlFor="conversion_rate">전환율 (%)</Label>
                     <Input
@@ -635,7 +655,9 @@ export default function SubmitReport() {
                       onChange={(e) => handleInputChange("conversion_rate", e.target.value)}
                     />
                   </div>
+                  )}
 
+                  {enabledOptionalFields.has("cac") && (
                   <div className="space-y-2">
                     <Label htmlFor="cac">CAC (원)</Label>
                     <Input
@@ -646,8 +668,10 @@ export default function SubmitReport() {
                       onChange={(e) => handleInputChange("cac", e.target.value)}
                     />
                   </div>
+                  )}
                 </div>
               </div>
+              )}
 
               <Button
                 type="submit"
