@@ -142,8 +142,11 @@ export default function SubmitReport() {
         setCompanyName(investee?.company_name || "");
         setInvesteeId(investee?.id || "");
         
-        // Set enabled optional fields from investee config
-        if (investee?.report_fields && Array.isArray(investee.report_fields)) {
+        // Set enabled optional fields: request-level overrides investee-level
+        const requestFields = (data as any).report_fields;
+        if (requestFields && Array.isArray(requestFields)) {
+          setEnabledOptionalFields(new Set(requestFields));
+        } else if (investee?.report_fields && Array.isArray(investee.report_fields)) {
           setEnabledOptionalFields(new Set(investee.report_fields));
         }
         

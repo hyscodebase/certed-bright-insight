@@ -215,6 +215,7 @@ export type Database = {
           expires_at: string
           id: string
           investee_id: string
+          report_fields: string[] | null
           report_period: string | null
           request_token: string
           requested_at: string
@@ -225,6 +226,7 @@ export type Database = {
           expires_at?: string
           id?: string
           investee_id: string
+          report_fields?: string[] | null
           report_period?: string | null
           request_token: string
           requested_at?: string
@@ -235,6 +237,7 @@ export type Database = {
           expires_at?: string
           id?: string
           investee_id?: string
+          report_fields?: string[] | null
           report_period?: string | null
           request_token?: string
           requested_at?: string

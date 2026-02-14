@@ -45,7 +45,7 @@ export function useCreateReportRequest() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (params: { investeeId: string; reportPeriod: string }) => {
+    mutationFn: async (params: { investeeId: string; reportPeriod: string; reportFields?: string[] }) => {
       const token = crypto.randomUUID();
 
       const { data, error } = await supabase
@@ -54,7 +54,8 @@ export function useCreateReportRequest() {
           investee_id: params.investeeId,
           request_token: token,
           report_period: params.reportPeriod,
-        })
+          report_fields: params.reportFields ?? null,
+        } as any)
         .select()
         .single();
 

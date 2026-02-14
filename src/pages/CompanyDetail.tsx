@@ -157,23 +157,26 @@ export default function CompanyDetail() {
     setIsRequestDialogOpen(true);
   };
 
-  const handleRequestReport = async (reportPeriod: string) => {
+  const handleRequestReport = async (periods: Array<{ period: string; reportFields: string[] }>) => {
     if (!company || !company.contact_email) return;
 
     setIsSendingRequest(true);
 
     try {
-      const request = await createReportRequest.mutateAsync({
-        investeeId: company.id,
-        reportPeriod,
-      });
-      await sendReportEmail.mutateAsync({
-        company_name: company.company_name,
-        contact_email: company.contact_email,
-        request_token: request.request_token,
-        report_period: reportPeriod,
-        investor_company_name: investorCompanyName,
-      });
+      for (const { period, reportFields } of periods) {
+        const request = await createReportRequest.mutateAsync({
+          investeeId: company.id,
+          reportPeriod: period,
+          reportFields,
+        });
+        await sendReportEmail.mutateAsync({
+          company_name: company.company_name,
+          contact_email: company.contact_email,
+          request_token: request.request_token,
+          report_period: period,
+          investor_company_name: investorCompanyName,
+        });
+      }
       setIsRequestDialogOpen(false);
     } catch (error) {
       // Error handling is done in the hooks
@@ -649,6 +652,7 @@ export default function CompanyDetail() {
         onConfirm={handleRequestReport}
         isLoading={isSendingRequest}
         reportFrequency={company.report_frequency || "monthly"}
+        defaultReportFields={Array.from(currentReportFields)}
       />
 
       <FundFormDialog

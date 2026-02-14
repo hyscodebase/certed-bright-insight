@@ -1,4 +1,4 @@
-import { List, ChevronRight, Send, Loader2 } from "lucide-react";
+import { List, Plus, Send, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -102,18 +102,24 @@ export default function InvesteeList() {
     setDialogOpen(true);
   };
 
-  const handleConfirmRequest = async (reportPeriod: string) => {
+  const handleConfirmRequest = async (periods: Array<{ period: string; reportFields: string[] }>) => {
     if (!selectedInvestee || !selectedInvestee.contactEmail) return;
     setSendingId(selectedInvestee.id);
     try {
-      const request = await createReportRequest.mutateAsync({ investeeId: selectedInvestee.id, reportPeriod });
-      await sendReportEmail.mutateAsync({
-        company_name: selectedInvestee.companyName,
-        contact_email: selectedInvestee.contactEmail,
-        request_token: request.request_token,
-        report_period: reportPeriod,
-        investor_company_name: investorCompanyName,
-      });
+      for (const { period, reportFields } of periods) {
+        const request = await createReportRequest.mutateAsync({
+          investeeId: selectedInvestee.id,
+          reportPeriod: period,
+          reportFields,
+        });
+        await sendReportEmail.mutateAsync({
+          company_name: selectedInvestee.companyName,
+          contact_email: selectedInvestee.contactEmail,
+          request_token: request.request_token,
+          report_period: period,
+          investor_company_name: investorCompanyName,
+        });
+      }
       setDialogOpen(false);
     } catch (error) {
       // Error handling in hooks
@@ -164,13 +170,10 @@ export default function InvesteeList() {
                 </SelectContent>
               </Select>
             )}
-            <button
-              onClick={() => navigate("/add-investee")}
-              className="flex items-center gap-1 text-sm text-primary hover:text-primary/80"
-            >
+            <Button onClick={() => navigate("/add-investee")} size="sm" className="gap-2">
+              <Plus className="h-4 w-4" />
               피투자사 추가
-              <ChevronRight className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
