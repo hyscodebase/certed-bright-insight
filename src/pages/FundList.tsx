@@ -7,6 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -88,57 +96,67 @@ export default function FundList() {
     <DashboardLayout>
       <PageHeader title="펀드 관리" icon={<Briefcase className="h-6 w-6" />} />
 
-      <div className="mb-4 flex justify-end">
-        <Button onClick={handleOpenCreate} className="gap-2">
-          <Plus className="h-4 w-4" />
-          펀드 추가
-        </Button>
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </div>
-      ) : funds && funds.length > 0 ? (
-        <div className="space-y-4">
-          {funds.map((fund) => {
-            const count = getInvesteeCountForFund(fund.id);
-            return (
-              <Card
-                key={fund.id}
-                className="animate-fade-in cursor-pointer border-border shadow-sm transition-colors hover:bg-muted/30"
-                onClick={() => navigate(`/funds/${fund.id}`)}
-              >
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <div>
-                    <CardTitle className="text-base font-semibold">{fund.name}</CardTitle>
-                    {fund.description && (
-                      <p className="mt-1 text-sm text-muted-foreground">{fund.description}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{count}개 포트폴리오</Badge>
-                    <Button variant="ghost" size="icon" onClick={(e) => handleOpenEdit(e, fund)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setDeleteTarget(fund); }}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </CardHeader>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        <Card className="animate-fade-in border-border shadow-sm">
-          <CardContent className="p-6 text-center text-muted-foreground">
-            등록된 펀드가 없습니다. 펀드를 추가해보세요.
-          </CardContent>
-        </Card>
-      )}
+      <Card className="animate-fade-in border-border shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <CardTitle className="text-base font-medium">펀드 목록</CardTitle>
+          <Button onClick={handleOpenCreate} size="sm" className="gap-2">
+            <Plus className="h-4 w-4" />
+            펀드 추가
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-6 space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          ) : funds && funds.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow className="border-t">
+                  <TableHead className="w-[30%] pl-6 font-medium text-foreground">펀드명</TableHead>
+                  <TableHead className="font-medium text-foreground">설명</TableHead>
+                  <TableHead className="font-medium text-foreground">포트폴리오</TableHead>
+                  <TableHead className="w-[120px] font-medium text-foreground">관리</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {funds.map((fund) => {
+                  const count = getInvesteeCountForFund(fund.id);
+                  return (
+                    <TableRow
+                      key={fund.id}
+                      className="cursor-pointer transition-colors hover:bg-muted/50"
+                      onClick={() => navigate(`/funds/${fund.id}`)}
+                    >
+                      <TableCell className="pl-6 font-medium">{fund.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{fund.description || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{count}개</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleOpenEdit(e, fund)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setDeleteTarget(fund); }}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="p-6 text-center text-muted-foreground">
+              등록된 펀드가 없습니다. 펀드를 추가해보세요.
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Create/Edit Dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>

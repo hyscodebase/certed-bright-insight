@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -15,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCreateInvestee } from "@/hooks/useInvestees";
+import { useFunds, useAddInvesteeToFund } from "@/hooks/useFunds";
 
 const REPORT_FREQUENCY_OPTIONS = [
   { value: "monthly", label: "월간" },
@@ -29,9 +31,18 @@ export default function AddInvestee() {
   const [representative, setRepresentative] = useState("");
   const [email, setEmail] = useState("");
   const [reportFrequency, setReportFrequency] = useState("monthly");
+  const [selectedFundIds, setSelectedFundIds] = useState<string[]>([]);
   const createInvestee = useCreateInvestee();
+  const { data: funds } = useFunds();
+  const addInvesteeToFund = useAddInvesteeToFund();
 
   const isFormValid = companyName.trim() && email.trim();
+
+  const toggleFund = (fundId: string) => {
+    setSelectedFundIds((prev) =>
+      prev.includes(fundId) ? prev.filter((id) => id !== fundId) : [...prev, fundId]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +55,15 @@ export default function AddInvestee() {
         report_frequency: reportFrequency,
       },
       {
-        onSuccess: () => {
+        onSuccess: async (result) => {
+          // Add to selected funds
+          if (selectedFundIds.length > 0 && result?.id) {
+            await Promise.all(
+              selectedFundIds.map((fundId) =>
+                addInvesteeToFund.mutateAsync({ fund_id: fundId, investee_id: result.id })
+              )
+            );
+          }
           navigate("/investees");
         },
       }
@@ -114,6 +133,32 @@ export default function AddInvestee() {
                 피투자사의 주주보고서 작성 주기를 설정합니다.
               </p>
             </div>
+
+            {funds && funds.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">펀드 배정</Label>
+                <div className="space-y-2 rounded-lg border border-border p-3">
+                  {funds.map((fund) => (
+                    <label
+                      key={fund.id}
+                      className="flex cursor-pointer items-center gap-3 rounded-md p-2 hover:bg-muted/50"
+                    >
+                      <Checkbox
+                        checked={selectedFundIds.includes(fund.id)}
+                        onCheckedChange={() => toggleFund(fund.id)}
+                      />
+                      <span className="text-sm">{fund.name}</span>
+                      {fund.description && (
+                        <span className="text-xs text-muted-foreground">— {fund.description}</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  피투자사를 배정할 펀드를 선택하세요. 여러 펀드에 동시 배정 가능합니다.
+                </p>
+              </div>
+            )}
 
             <Button
               type="submit"
