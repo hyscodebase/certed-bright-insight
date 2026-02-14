@@ -1,31 +1,37 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Building2, ChevronRight, ChevronLeft, Check, Search, Plus, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useCreateInvestee } from "@/hooks/useInvestees";
 import { useFunds, useAddInvesteeToFund, type Fund } from "@/hooks/useFunds";
 import { FundFormDialog } from "@/components/funds/FundFormDialog";
+import { useToast } from "@/hooks/use-toast";
 
-const REPORT_FREQUENCY_OPTIONS = [
-  { value: "monthly", label: "월간" },
-  { value: "quarterly", label: "분기" },
-  { value: "semi_annual", label: "반기" },
-  { value: "annual", label: "연간" },
-];
+const FREQUENCY_OPTIONS = [
+  { key: "monthly", label: "월간" },
+  { key: "quarterly", label: "분기" },
+  { key: "semi_annual", label: "반기" },
+  { key: "annual", label: "연간" },
+] as const;
+
+const OPTIONAL_REPORT_FIELDS = [
+  { key: "contract_count", label: "계약 수" },
+  { key: "paid_customer_count", label: "유료 고객 수" },
+  { key: "average_contract_value", label: "평균 계약 단가" },
+  { key: "mau", label: "MAU" },
+  { key: "dau", label: "DAU" },
+  { key: "conversion_rate", label: "전환율" },
+  { key: "cac", label: "CAC" },
+] as const;
+
+const ALL_FIELD_KEYS = OPTIONAL_REPORT_FIELDS.map(f => f.key);
 
 const STEPS = [
   { id: 1, title: "기업 정보" },
@@ -33,13 +39,15 @@ const STEPS = [
   { id: 3, title: "펀드 배정" },
 ];
 
+type ReportFieldsConfig = Record<string, string[]>;
+
 export default function AddInvestee() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [companyName, setCompanyName] = useState("");
   const [representative, setRepresentative] = useState("");
   const [email, setEmail] = useState("");
-  const [reportFrequency, setReportFrequency] = useState("monthly");
   const [selectedFundIds, setSelectedFundIds] = useState<string[]>([]);
   const [fundSearch, setFundSearch] = useState("");
   const [fundFormOpen, setFundFormOpen] = useState(false);
@@ -47,6 +55,57 @@ export default function AddInvestee() {
   const createInvestee = useCreateInvestee();
   const { data: funds } = useFunds();
   const addInvesteeToFund = useAddInvesteeToFund();
+
+  // Report fields config: { monthly: [...], quarterly: [...], ... }
+  const [reportFieldsConfig, setReportFieldsConfig] = useState<ReportFieldsConfig>({
+    monthly: [...ALL_FIELD_KEYS],
+  });
+
+  const enabledFrequencies = useMemo(() => new Set(Object.keys(reportFieldsConfig)), [reportFieldsConfig]);
+
+  const [selectedFrequencyTab, setSelectedFrequencyTab] = useState("monthly");
+
+  const activeFrequencyTab = useMemo(() => {
+    if (enabledFrequencies.has(selectedFrequencyTab)) return selectedFrequencyTab;
+    const first = FREQUENCY_OPTIONS.find(f => enabledFrequencies.has(f.key));
+    return first?.key || "monthly";
+  }, [selectedFrequencyTab, enabledFrequencies]);
+
+  const currentFrequencyFields = useMemo(
+    () => new Set<string>(reportFieldsConfig[activeFrequencyTab] ?? []),
+    [activeFrequencyTab, reportFieldsConfig]
+  );
+
+  const handleToggleFrequency = useCallback((freqKey: string) => {
+    setReportFieldsConfig(prev => {
+      const next = { ...prev };
+      if (next[freqKey]) {
+        if (Object.keys(next).length <= 1) {
+          toast({ title: "최소 1개의 보고 주기를 선택해야 합니다.", variant: "destructive" });
+          return prev;
+        }
+        delete next[freqKey];
+        if (activeFrequencyTab === freqKey) {
+          setSelectedFrequencyTab(Object.keys(next)[0] || "monthly");
+        }
+      } else {
+        next[freqKey] = [...ALL_FIELD_KEYS];
+      }
+      return next;
+    });
+  }, [activeFrequencyTab, toast]);
+
+  const handleToggleReportField = useCallback((fieldKey: string) => {
+    setReportFieldsConfig(prev => {
+      const currentFields = new Set(prev[activeFrequencyTab] ?? []);
+      if (currentFields.has(fieldKey)) {
+        currentFields.delete(fieldKey);
+      } else {
+        currentFields.add(fieldKey);
+      }
+      return { ...prev, [activeFrequencyTab]: Array.from(currentFields) };
+    });
+  }, [activeFrequencyTab]);
 
   const isStep1Valid = companyName.trim() && email.trim();
   const totalSteps = funds && funds.length > 0 ? 3 : 2;
@@ -71,13 +130,20 @@ export default function AddInvestee() {
     if (step > 1) setStep(step - 1);
   };
 
+  // Determine primary report_frequency from enabled frequencies
+  const primaryFrequency = useMemo(() => {
+    const order = ["monthly", "quarterly", "semi_annual", "annual"];
+    return order.find(f => enabledFrequencies.has(f)) || "monthly";
+  }, [enabledFrequencies]);
+
   const handleSubmit = async () => {
     createInvestee.mutate(
       {
         company_name: companyName,
         contact_email: email,
         representative: representative.trim() || null,
-        report_frequency: reportFrequency,
+        report_frequency: primaryFrequency,
+        report_fields: reportFieldsConfig,
       },
       {
         onSuccess: async (result) => {
@@ -184,22 +250,75 @@ export default function AddInvestee() {
           {/* Step 2: 보고 설정 */}
           {step === 2 && (
             <div className="space-y-6">
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">보고 주기</Label>
-                <Select value={reportFrequency} onValueChange={setReportFrequency}>
-                  <SelectTrigger className="h-11 rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {REPORT_FREQUENCY_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Frequency multi-select */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">보고 주기 선택</Label>
                 <p className="text-xs text-muted-foreground">
-                  피투자사의 주주보고서 작성 주기를 설정합니다.
+                  여러 보고 주기를 활성화하고 각 주기별로 수집 항목을 설정할 수 있습니다.
                 </p>
+                <div className="flex flex-wrap gap-2">
+                  {FREQUENCY_OPTIONS.map((freq) => {
+                    const isEnabled = enabledFrequencies.has(freq.key);
+                    return (
+                      <button
+                        key={freq.key}
+                        onClick={() => handleToggleFrequency(freq.key)}
+                        className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                          isEnabled
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {freq.label}
+                        {isEnabled && <Check className="ml-1.5 inline h-3.5 w-3.5" />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+
+              {/* Per-frequency field config */}
+              {enabledFrequencies.size > 0 && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">선택 항목 설정</Label>
+                  {/* Frequency tabs */}
+                  {enabledFrequencies.size > 1 && (
+                    <div className="flex gap-1 rounded-lg border p-1">
+                      {FREQUENCY_OPTIONS.filter(f => enabledFrequencies.has(f.key)).map((freq) => (
+                        <button
+                          key={freq.key}
+                          onClick={() => setSelectedFrequencyTab(freq.key)}
+                          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                            activeFrequencyTab === freq.key
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:bg-muted"
+                          }`}
+                        >
+                          {freq.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Field checkboxes */}
+                  <div className="space-y-1 rounded-lg border p-3">
+                    {OPTIONAL_REPORT_FIELDS.map((field) => (
+                      <div
+                        key={field.key}
+                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-muted/50"
+                        onClick={() => handleToggleReportField(field.key)}
+                      >
+                        <Checkbox
+                          checked={currentFrequencyFields.has(field.key)}
+                          onCheckedChange={() => handleToggleReportField(field.key)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span className="text-sm">{field.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Summary of step 1 */}
               <div className="rounded-lg border border-border bg-muted/30 p-4">
