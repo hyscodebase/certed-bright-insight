@@ -447,6 +447,7 @@ export default function CompanyDetail() {
         companyName={company.company_name}
         onConfirm={handleRequestReport}
         isLoading={isSendingRequest}
+        reportFrequency={company.report_frequency || "monthly"}
       />
     </DashboardLayout>
   );

@@ -24,21 +24,80 @@ interface ReportRequestDialogProps {
   companyName: string;
   onConfirm: (reportPeriod: string) => Promise<void>;
   isLoading: boolean;
+  reportFrequency?: string;
 }
 
 function generateMonthOptions(): Array<{ value: string; label: string }> {
   const options: Array<{ value: string; label: string }> = [];
   const now = new Date();
-  
-  // Generate options for the past 12 months and current month
   for (let i = 0; i < 12; i++) {
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const label = `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
     options.push({ value, label });
   }
-  
   return options;
+}
+
+function generateQuarterOptions(): Array<{ value: string; label: string }> {
+  const options: Array<{ value: string; label: string }> = [];
+  const now = new Date();
+  const currentQ = Math.ceil((now.getMonth() + 1) / 3);
+  const currentYear = now.getFullYear();
+  for (let i = 0; i < 8; i++) {
+    let q = currentQ - i;
+    let y = currentYear;
+    while (q <= 0) { q += 4; y--; }
+    const endMonth = q * 3;
+    const value = `${y}-Q${q}`;
+    const label = `${y}년 ${q}분기`;
+    options.push({ value, label });
+  }
+  return options;
+}
+
+function generateSemiAnnualOptions(): Array<{ value: string; label: string }> {
+  const options: Array<{ value: string; label: string }> = [];
+  const now = new Date();
+  const currentHalf = now.getMonth() < 6 ? 1 : 2;
+  const currentYear = now.getFullYear();
+  for (let i = 0; i < 6; i++) {
+    let h = currentHalf - i;
+    let y = currentYear;
+    while (h <= 0) { h += 2; y--; }
+    const value = `${y}-H${h}`;
+    const label = `${y}년 ${h === 1 ? "상반기" : "하반기"}`;
+    options.push({ value, label });
+  }
+  return options;
+}
+
+function generateAnnualOptions(): Array<{ value: string; label: string }> {
+  const options: Array<{ value: string; label: string }> = [];
+  const currentYear = new Date().getFullYear();
+  for (let i = 0; i < 5; i++) {
+    const y = currentYear - i;
+    options.push({ value: `${y}`, label: `${y}년` });
+  }
+  return options;
+}
+
+function getOptionsForFrequency(frequency: string) {
+  switch (frequency) {
+    case "quarterly": return generateQuarterOptions();
+    case "semi_annual": return generateSemiAnnualOptions();
+    case "annual": return generateAnnualOptions();
+    default: return generateMonthOptions();
+  }
+}
+
+function getFrequencyLabel(frequency: string) {
+  switch (frequency) {
+    case "quarterly": return "분기";
+    case "semi_annual": return "반기";
+    case "annual": return "연도";
+    default: return "월";
+  }
 }
 
 export function ReportRequestDialog({
@@ -47,13 +106,16 @@ export function ReportRequestDialog({
   companyName,
   onConfirm,
   isLoading,
+  reportFrequency = "monthly",
 }: ReportRequestDialogProps) {
-  const monthOptions = generateMonthOptions();
-  const [selectedPeriod, setSelectedPeriod] = useState(monthOptions[0].value);
+  const periodOptions = getOptionsForFrequency(reportFrequency);
+  const [selectedPeriod, setSelectedPeriod] = useState(periodOptions[0].value);
 
   const handleConfirm = async () => {
     await onConfirm(selectedPeriod);
   };
+
+  const frequencyLabel = getFrequencyLabel(reportFrequency);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -67,13 +129,13 @@ export function ReportRequestDialog({
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="report-period">보고 월 선택</Label>
+            <Label htmlFor="report-period">보고 {frequencyLabel} 선택</Label>
             <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
               <SelectTrigger id="report-period" className="w-full">
-                <SelectValue placeholder="보고 월을 선택하세요" />
+                <SelectValue placeholder={`보고 ${frequencyLabel}을 선택하세요`} />
               </SelectTrigger>
               <SelectContent className="z-50 bg-background">
-                {monthOptions.map((option) => (
+                {periodOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
                   </SelectItem>
@@ -81,7 +143,7 @@ export function ReportRequestDialog({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              피투자사가 작성할 보고서의 기준 월을 선택하세요.
+              피투자사가 작성할 보고서의 기준 {frequencyLabel}을 선택하세요.
             </p>
           </div>
         </div>

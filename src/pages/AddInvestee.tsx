@@ -7,13 +7,28 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useCreateInvestee } from "@/hooks/useInvestees";
+
+const REPORT_FREQUENCY_OPTIONS = [
+  { value: "monthly", label: "월간" },
+  { value: "quarterly", label: "분기" },
+  { value: "semi_annual", label: "반기" },
+  { value: "annual", label: "연간" },
+];
 
 export default function AddInvestee() {
   const navigate = useNavigate();
   const [companyName, setCompanyName] = useState("");
   const [representative, setRepresentative] = useState("");
   const [email, setEmail] = useState("");
+  const [reportFrequency, setReportFrequency] = useState("monthly");
   const createInvestee = useCreateInvestee();
 
   const isFormValid = companyName.trim() && email.trim();
@@ -26,6 +41,7 @@ export default function AddInvestee() {
         company_name: companyName, 
         contact_email: email,
         representative: representative.trim() || null,
+        report_frequency: reportFrequency,
       },
       {
         onSuccess: () => {
@@ -80,6 +96,23 @@ export default function AddInvestee() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-11 rounded-lg"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">보고 주기</Label>
+              <Select value={reportFrequency} onValueChange={setReportFrequency}>
+                <SelectTrigger className="h-11 rounded-lg">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {REPORT_FREQUENCY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                피투자사의 주주보고서 작성 주기를 설정합니다.
+              </p>
             </div>
 
             <Button

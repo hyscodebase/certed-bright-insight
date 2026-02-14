@@ -1,4 +1,4 @@
-import { Home, Building2, List, User, LogOut, Menu, X } from "lucide-react";
+import { Home, Building2, List, Briefcase, User, LogOut, Menu, X } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ const menuItems = [
   { title: "홈", url: "/", icon: Home },
   { title: "피투자사 추가", url: "/add-investee", icon: Building2 },
   { title: "피투자사 목록", url: "/investees", icon: List },
+  { title: "펀드 관리", url: "/funds", icon: Briefcase },
   { title: "프로필", url: "/profile", icon: User },
 ];
 
