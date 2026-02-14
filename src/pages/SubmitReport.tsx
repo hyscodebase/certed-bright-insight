@@ -600,17 +600,7 @@ export default function SubmitReport() {
                       <p className="text-xs text-destructive">필수 항목입니다</p>
                     )}
                   </div>
-                </div>
-              </div>
 
-              {/* KPI Fields Section - only enabled fields, all required */}
-              {enabledOptionalFields.size > 0 && (
-              <div className="space-y-6">
-                <h3 className="text-base font-semibold text-foreground">
-                  KPI 항목 <span className="text-destructive">*</span>
-                </h3>
-
-                <div className="grid gap-4 sm:grid-cols-2">
                   {enabledOptionalFields.has("contract_count") && (
                   <div className="space-y-2">
                     <Label htmlFor="contract_count">계약 수 <span className="text-destructive">*</span></Label>
@@ -718,7 +708,6 @@ export default function SubmitReport() {
                   )}
                 </div>
               </div>
-              )}
 
               <Button
                 type="submit"
