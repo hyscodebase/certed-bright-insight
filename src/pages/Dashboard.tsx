@@ -1,12 +1,16 @@
-import { Home, Building2, FileCheck, Clock, FileX, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Home, Building2, FileCheck, Clock, FileX, ChevronRight, Briefcase, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { useInvestees } from "@/hooks/useInvestees";
+import { useFunds } from "@/hooks/useFunds";
 import { useLatestReportStatus } from "@/hooks/useLatestReportStatus";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { FundFormDialog } from "@/components/funds/FundFormDialog";
 
 interface StatCardProps {
   title: string;
@@ -41,10 +45,12 @@ function StatCard({ title, value, subtitle, icon, onClick }: StatCardProps) {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: investees, isLoading } = useInvestees();
+  const { data: funds, isLoading: fundsLoading } = useFunds();
   const { data: reportStatuses } = useLatestReportStatus(investees?.map((i) => i.id) || []);
+  const [fundFormOpen, setFundFormOpen] = useState(false);
 
-  // Calculate statistics
   const totalInvestees = investees?.length || 0;
+  const hasFunds = funds && funds.length > 0;
   
   const reportStats = {
     submitted: 0,
@@ -71,7 +77,7 @@ export default function Dashboard() {
     ? Math.round((reportStats.submitted / totalInvestees) * 100) 
     : 0;
 
-  if (isLoading) {
+  if (isLoading || fundsLoading) {
     return (
       <DashboardLayout>
         <PageHeader title="홈" icon={<Home className="h-6 w-6" />} />
@@ -93,6 +99,27 @@ export default function Dashboard() {
       <PageHeader title="홈" icon={<Home className="h-6 w-6" />} />
 
       <div className="space-y-6">
+        {/* No Funds Onboarding */}
+        {!hasFunds && (
+          <Card className="animate-fade-in border-dashed border-2 border-primary/30 bg-primary/5 shadow-sm">
+            <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                <Briefcase className="h-7 w-7 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">펀드를 먼저 생성해 주세요</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  피투자사를 관리하려면 먼저 펀드를 생성해야 합니다. 펀드를 만들고 피투자사를 배정해 보세요.
+                </p>
+              </div>
+              <Button onClick={() => setFundFormOpen(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
+                첫 번째 펀드 만들기
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
@@ -161,6 +188,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <FundFormDialog open={fundFormOpen} onOpenChange={setFundFormOpen} />
     </DashboardLayout>
   );
 }

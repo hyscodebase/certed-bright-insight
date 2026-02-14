@@ -1,37 +1,27 @@
 import { useParams } from "react-router-dom";
-import { Building2, TrendingUp, DollarSign, RefreshCw, FileText, Send, Loader2 } from "lucide-react";
+import { Building2, TrendingUp, DollarSign, RefreshCw, FileText, Send, Loader2, Briefcase, Plus, Pencil, X } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip,
 } from "recharts";
 import { useInvestee } from "@/hooks/useInvestees";
 import { useShareholderReports, useCreateReportRequest, useSendReportRequestEmail, type ShareholderReport } from "@/hooks/useShareholderReports";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ReportDetailDialog } from "@/components/reports/ReportDetailDialog";
 import { ReportRequestDialog } from "@/components/reports/ReportRequestDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useFunds, useAllFundInvestees, useAddInvesteeToFund, useRemoveInvesteeFromFund, type Fund } from "@/hooks/useFunds";
+import { FundFormDialog } from "@/components/funds/FundFormDialog";
 
 function formatCurrency(amount: number | null): string {
   if (amount === null || amount === 0) return "정보 없음";
@@ -65,7 +55,28 @@ export default function CompanyDetail() {
   const [selectedReport, setSelectedReport] = useState<ShareholderReport | null>(null);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
+  const [fundFormOpen, setFundFormOpen] = useState(false);
+  const [editingFund, setEditingFund] = useState<Fund | null>(null);
 
+  // Fund management
+  const { data: funds } = useFunds();
+  const { data: allFundInvestees } = useAllFundInvestees();
+  const addToFund = useAddInvesteeToFund();
+  const removeFromFund = useRemoveInvesteeFromFund();
+
+  const assignedFundIds = useMemo(() => {
+    if (!allFundInvestees || !id) return new Set<string>();
+    return new Set(allFundInvestees.filter((fi) => fi.investee_id === id).map((fi) => fi.fund_id));
+  }, [allFundInvestees, id]);
+
+  const handleToggleFund = async (fundId: string) => {
+    if (!id) return;
+    if (assignedFundIds.has(fundId)) {
+      await removeFromFund.mutateAsync({ fund_id: fundId, investee_id: id });
+    } else {
+      await addToFund.mutateAsync({ fund_id: fundId, investee_id: id });
+    }
+  };
   // Fetch investor's company name from profile
   const { data: investorProfile } = useQuery({
     queryKey: ["investor-profile"],
@@ -211,6 +222,51 @@ export default function CompanyDetail() {
             <InfoRow label="대표자" value={company.representative || "정보 없음"} />
             <InfoRow label="담당자 이메일" value={company.contact_email || "정보 없음"} />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Fund Assignments */}
+      <Card className="mb-6 animate-fade-in border-border shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Briefcase className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-base font-medium">소속 펀드</CardTitle>
+            </div>
+            <Button size="sm" variant="outline" className="gap-1" onClick={() => { setEditingFund(null); setFundFormOpen(true); }}>
+              <Plus className="h-3.5 w-3.5" />
+              펀드 생성
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {funds && funds.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {funds.map((fund) => {
+                const isAssigned = assignedFundIds.has(fund.id);
+                return (
+                  <div key={fund.id} className="flex items-center gap-1">
+                    <Badge
+                      variant={isAssigned ? "default" : "outline"}
+                      className={`cursor-pointer transition-colors ${isAssigned ? "" : "opacity-50 hover:opacity-80"}`}
+                      onClick={() => handleToggleFund(fund.id)}
+                    >
+                      {fund.name}
+                      {isAssigned && <X className="ml-1 h-3 w-3" />}
+                    </Badge>
+                    <button
+                      className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      onClick={() => { setEditingFund(fund); setFundFormOpen(true); }}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">등록된 펀드가 없습니다. 펀드를 먼저 생성해 주세요.</p>
+          )}
         </CardContent>
       </Card>
 
@@ -448,6 +504,12 @@ export default function CompanyDetail() {
         onConfirm={handleRequestReport}
         isLoading={isSendingRequest}
         reportFrequency={company.report_frequency || "monthly"}
+      />
+
+      <FundFormDialog
+        open={fundFormOpen}
+        onOpenChange={setFundFormOpen}
+        editingFund={editingFund}
       />
     </DashboardLayout>
   );

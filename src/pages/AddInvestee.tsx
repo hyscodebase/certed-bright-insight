@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Building2, ChevronRight, ChevronLeft, Check, Search } from "lucide-react";
+import { Building2, ChevronRight, ChevronLeft, Check, Search, Plus, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -17,7 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCreateInvestee } from "@/hooks/useInvestees";
-import { useFunds, useAddInvesteeToFund } from "@/hooks/useFunds";
+import { useFunds, useAddInvesteeToFund, type Fund } from "@/hooks/useFunds";
+import { FundFormDialog } from "@/components/funds/FundFormDialog";
 
 const REPORT_FREQUENCY_OPTIONS = [
   { value: "monthly", label: "월간" },
@@ -41,6 +42,8 @@ export default function AddInvestee() {
   const [reportFrequency, setReportFrequency] = useState("monthly");
   const [selectedFundIds, setSelectedFundIds] = useState<string[]>([]);
   const [fundSearch, setFundSearch] = useState("");
+  const [fundFormOpen, setFundFormOpen] = useState(false);
+  const [editingFund, setEditingFund] = useState<Fund | null>(null);
   const createInvestee = useCreateInvestee();
   const { data: funds } = useFunds();
   const addInvesteeToFund = useAddInvesteeToFund();
@@ -217,9 +220,15 @@ export default function AddInvestee() {
                 <p className="text-sm text-muted-foreground">
                   피투자사를 배정할 펀드를 선택하세요. 여러 펀드에 동시 배정 가능합니다.
                 </p>
-                {selectedFundIds.length > 0 && (
-                  <Badge variant="secondary">{selectedFundIds.length}개 선택</Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedFundIds.length > 0 && (
+                    <Badge variant="secondary">{selectedFundIds.length}개 선택</Badge>
+                  )}
+                  <Button size="sm" variant="outline" className="gap-1" onClick={() => { setEditingFund(null); setFundFormOpen(true); }}>
+                    <Plus className="h-3.5 w-3.5" />
+                    펀드 생성
+                  </Button>
+                </div>
               </div>
 
               <div className="relative">
@@ -247,11 +256,21 @@ export default function AddInvestee() {
                         checked={selectedFundIds.includes(fund.id)}
                         onCheckedChange={() => toggleFund(fund.id)}
                       />
-                      <div className="min-w-0 flex-1">
-                        <span className="text-sm font-medium">{fund.name}</span>
-                        {fund.description && (
-                          <p className="truncate text-xs text-muted-foreground">{fund.description}</p>
-                        )}
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-sm font-medium">{fund.name}</span>
+                          {fund.description && (
+                            <p className="truncate text-xs text-muted-foreground">{fund.description}</p>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 shrink-0"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingFund(fund); setFundFormOpen(true); }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
                       </div>
                     </label>
                   ))
@@ -297,6 +316,17 @@ export default function AddInvestee() {
           </div>
         </CardContent>
       </Card>
+
+      <FundFormDialog
+        open={fundFormOpen}
+        onOpenChange={setFundFormOpen}
+        editingFund={editingFund}
+        onSuccess={(fund) => {
+          if (!editingFund && fund?.id) {
+            setSelectedFundIds((prev) => [...prev, fund.id]);
+          }
+        }}
+      />
     </DashboardLayout>
   );
 }
