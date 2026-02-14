@@ -86,12 +86,12 @@ export default function CompanyDetail() {
   const [reportFieldsEditMode, setReportFieldsEditMode] = useState(false);
   const queryClient = useQueryClient();
 
+  // --- Report Fields: local draft state ---
   const reportFieldsConfig = useMemo((): ReportFieldsConfig => {
     const raw = (company as any)?.report_fields;
     if (raw && typeof raw === "object" && !Array.isArray(raw)) {
       return raw as ReportFieldsConfig;
     }
-    // Legacy: flat array or missing -> apply to all frequencies
     const defaultFields = Array.isArray(raw) ? raw : [...ALL_FIELD_KEYS];
     return {
       monthly: defaultFields,
@@ -101,14 +101,17 @@ export default function CompanyDetail() {
     };
   }, [(company as any)?.report_fields]);
 
-  // Enabled frequencies = keys present in reportFieldsConfig
+  const [draftReportFields, setDraftReportFields] = useState<ReportFieldsConfig | null>(null);
+
+  // The active config: draft when editing, server data otherwise
+  const activeReportFieldsConfig = draftReportFields ?? reportFieldsConfig;
+
   const enabledFrequencies = useMemo(() => {
-    return new Set(Object.keys(reportFieldsConfig));
-  }, [reportFieldsConfig]);
+    return new Set(Object.keys(activeReportFieldsConfig));
+  }, [activeReportFieldsConfig]);
 
   const [selectedFrequencyTab, setSelectedFrequencyTab] = useState<string>("");
 
-  // Auto-select first enabled tab
   const activeFrequencyTab = useMemo(() => {
     const enabledArr = FREQUENCY_OPTIONS.filter(f => enabledFrequencies.has(f.key));
     if (selectedFrequencyTab && enabledFrequencies.has(selectedFrequencyTab)) return selectedFrequencyTab;
@@ -116,12 +119,12 @@ export default function CompanyDetail() {
   }, [selectedFrequencyTab, enabledFrequencies]);
 
   const getFieldsForFrequency = (freq: string): Set<string> => {
-    return new Set<string>(reportFieldsConfig[freq] ?? ALL_FIELD_KEYS);
+    return new Set<string>(activeReportFieldsConfig[freq] ?? ALL_FIELD_KEYS);
   };
 
   const currentFrequencyFields = useMemo(
     () => getFieldsForFrequency(activeFrequencyTab),
-    [activeFrequencyTab, reportFieldsConfig]
+    [activeFrequencyTab, activeReportFieldsConfig]
   );
 
   const updateReportFields = useMutation({
@@ -140,35 +143,47 @@ export default function CompanyDetail() {
   });
 
   const handleToggleFrequency = useCallback((freqKey: string) => {
-    const newConfig = { ...reportFieldsConfig };
-    if (newConfig[freqKey]) {
-      // Don't allow disabling all frequencies
-      if (Object.keys(newConfig).length <= 1) {
+    const current = { ...activeReportFieldsConfig };
+    if (current[freqKey]) {
+      if (Object.keys(current).length <= 1) {
         toast({ title: "최소 1개의 보고 주기를 선택해야 합니다.", variant: "destructive" });
         return;
       }
-      delete newConfig[freqKey];
+      delete current[freqKey];
       if (activeFrequencyTab === freqKey) {
-        setSelectedFrequencyTab(Object.keys(newConfig)[0] || "monthly");
+        setSelectedFrequencyTab(Object.keys(current)[0] || "monthly");
       }
     } else {
-      newConfig[freqKey] = [...ALL_FIELD_KEYS];
+      current[freqKey] = [...ALL_FIELD_KEYS];
     }
-    updateReportFields.mutate(newConfig);
-  }, [reportFieldsConfig, activeFrequencyTab, updateReportFields]);
+    setDraftReportFields(current);
+  }, [activeReportFieldsConfig, activeFrequencyTab]);
 
   const handleToggleReportField = useCallback((fieldKey: string) => {
-    const currentFields = new Set(reportFieldsConfig[activeFrequencyTab] ?? ALL_FIELD_KEYS);
+    const currentFields = new Set(activeReportFieldsConfig[activeFrequencyTab] ?? ALL_FIELD_KEYS);
     if (currentFields.has(fieldKey)) {
       currentFields.delete(fieldKey);
     } else {
       currentFields.add(fieldKey);
     }
-    updateReportFields.mutate({
-      ...reportFieldsConfig,
+    setDraftReportFields({
+      ...activeReportFieldsConfig,
       [activeFrequencyTab]: Array.from(currentFields),
     });
-  }, [reportFieldsConfig, activeFrequencyTab, updateReportFields]);
+  }, [activeReportFieldsConfig, activeFrequencyTab]);
+
+  const handleSaveReportFields = () => {
+    if (draftReportFields) {
+      updateReportFields.mutate(draftReportFields);
+    }
+    setDraftReportFields(null);
+    setReportFieldsEditMode(false);
+  };
+
+  const handleCancelReportFieldsEdit = () => {
+    setDraftReportFields(null);
+    setReportFieldsEditMode(false);
+  };
 
   // Fund management
   const { data: funds } = useFunds();
@@ -181,13 +196,46 @@ export default function CompanyDetail() {
     return new Set(allFundInvestees.filter((fi) => fi.investee_id === id).map((fi) => fi.fund_id));
   }, [allFundInvestees, id]);
 
-  const handleToggleFund = async (fundId: string) => {
-    if (!id) return;
-    if (assignedFundIds.has(fundId)) {
-      await removeFromFund.mutateAsync({ fund_id: fundId, investee_id: id });
+  // Draft state for fund assignments
+  const [draftFundIds, setDraftFundIds] = useState<Set<string> | null>(null);
+  const activeFundIds = draftFundIds ?? assignedFundIds;
+
+  const handleToggleFund = (fundId: string) => {
+    const current = new Set(activeFundIds);
+    if (current.has(fundId)) {
+      current.delete(fundId);
     } else {
-      await addToFund.mutateAsync({ fund_id: fundId, investee_id: id });
+      current.add(fundId);
     }
+    setDraftFundIds(current);
+  };
+
+  const handleSaveFunds = async () => {
+    if (!id || !draftFundIds) {
+      setFundEditMode(false);
+      return;
+    }
+    // Compute diff
+    const toAdd = [...draftFundIds].filter(fid => !assignedFundIds.has(fid));
+    const toRemove = [...assignedFundIds].filter(fid => !draftFundIds.has(fid));
+    try {
+      for (const fid of toAdd) {
+        await addToFund.mutateAsync({ fund_id: fid, investee_id: id });
+      }
+      for (const fid of toRemove) {
+        await removeFromFund.mutateAsync({ fund_id: fid, investee_id: id });
+      }
+      toast({ title: "소속 펀드가 저장되었습니다." });
+    } catch (e) {
+      // error handled in hooks
+    }
+    setDraftFundIds(null);
+    setFundEditMode(false);
+  };
+
+  const handleCancelFundEdit = () => {
+    setDraftFundIds(null);
+    setFundEditMode(false);
   };
   // Fetch investor's company name from profile
   const { data: investorProfile } = useQuery({
@@ -356,9 +404,14 @@ export default function CompanyDetail() {
                   펀드 생성
                 </Button>
               )}
-              <Button size="sm" variant={fundEditMode ? "default" : "outline"} onClick={() => setFundEditMode(!fundEditMode)}>
-                {fundEditMode ? "완료" : "편집"}
-              </Button>
+              {fundEditMode ? (
+                <>
+                  <Button size="sm" variant="outline" onClick={handleCancelFundEdit}>취소</Button>
+                  <Button size="sm" onClick={handleSaveFunds}>저장</Button>
+                </>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => { setDraftFundIds(new Set(assignedFundIds)); setFundEditMode(true); }}>편집</Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -376,7 +429,7 @@ export default function CompanyDetail() {
               </TableHeader>
               <TableBody>
                 {funds && funds.length > 0 ? funds.map((fund) => {
-                  const isAssigned = assignedFundIds.has(fund.id);
+                  const isAssigned = activeFundIds.has(fund.id);
                   return (
                     <TableRow
                       key={fund.id}
@@ -442,9 +495,14 @@ export default function CompanyDetail() {
               <Settings2 className="h-5 w-5 text-muted-foreground" />
               <CardTitle className="text-base font-medium">보고서 선택 항목 설정</CardTitle>
             </div>
-            <Button size="sm" variant={reportFieldsEditMode ? "default" : "outline"} onClick={() => setReportFieldsEditMode(!reportFieldsEditMode)}>
-              {reportFieldsEditMode ? "완료" : "편집"}
-            </Button>
+            {reportFieldsEditMode ? (
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={handleCancelReportFieldsEdit}>취소</Button>
+                <Button size="sm" onClick={handleSaveReportFields}>저장</Button>
+              </div>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => { setDraftReportFields({ ...reportFieldsConfig }); setReportFieldsEditMode(true); }}>편집</Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">

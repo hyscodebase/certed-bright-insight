@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Briefcase, Search, TrendingUp, DollarSign, RefreshCw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,6 +52,7 @@ export default function FundDetail() {
   const removeInvestee = useRemoveInvesteeFromFund();
   const [search, setSearch] = useState("");
   const [editMode, setEditMode] = useState(false);
+  const { toast } = useToast();
 
   const fund = funds?.find((f) => f.id === fundId);
   const assignedIds = useMemo(
@@ -116,13 +118,45 @@ export default function FundDetail() {
     );
   }, [investees, search]);
 
-  const handleToggle = async (investeeId: string, checked: boolean) => {
-    if (!fundId) return;
+  // Draft state for batch save
+  const [draftAssignedIds, setDraftAssignedIds] = useState<Set<string> | null>(null);
+  const activeAssignedIds = draftAssignedIds ?? assignedIds;
+
+  const handleToggle = (investeeId: string, checked: boolean) => {
+    const current = new Set(activeAssignedIds);
     if (checked) {
-      await addInvestee.mutateAsync({ fund_id: fundId, investee_id: investeeId });
+      current.add(investeeId);
     } else {
-      await removeInvestee.mutateAsync({ fund_id: fundId, investee_id: investeeId });
+      current.delete(investeeId);
     }
+    setDraftAssignedIds(current);
+  };
+
+  const handleSaveAssignments = async () => {
+    if (!fundId || !draftAssignedIds) {
+      setEditMode(false);
+      return;
+    }
+    const toAdd = [...draftAssignedIds].filter(iid => !assignedIds.has(iid));
+    const toRemove = [...assignedIds].filter(iid => !draftAssignedIds.has(iid));
+    try {
+      for (const iid of toAdd) {
+        await addInvestee.mutateAsync({ fund_id: fundId, investee_id: iid });
+      }
+      for (const iid of toRemove) {
+        await removeInvestee.mutateAsync({ fund_id: fundId, investee_id: iid });
+      }
+      toast({ title: "소속 피투자사가 저장되었습니다." });
+    } catch (e) {
+      // error handled in hooks
+    }
+    setDraftAssignedIds(null);
+    setEditMode(false);
+  };
+
+  const handleCancelEdit = () => {
+    setDraftAssignedIds(null);
+    setEditMode(false);
   };
 
   const isLoading = investeesLoading || mappingLoading;
@@ -180,9 +214,14 @@ export default function FundDetail() {
               <CardTitle className="text-base font-medium">소속 피투자사</CardTitle>
               {!editMode && <Badge variant="secondary">{assignedIds.size}개</Badge>}
             </div>
-            <Button size="sm" variant={editMode ? "default" : "outline"} onClick={() => setEditMode(!editMode)}>
-              {editMode ? "완료" : "편집"}
-            </Button>
+            {editMode ? (
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={handleCancelEdit}>취소</Button>
+                <Button size="sm" onClick={handleSaveAssignments}>저장</Button>
+              </div>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => { setDraftAssignedIds(new Set(assignedIds)); setEditMode(true); }}>편집</Button>
+            )}
           </div>
           {editMode && (
             <div className="relative mt-3">
@@ -221,7 +260,7 @@ export default function FundDetail() {
                   </TableRow>
                 ) : filteredInvestees.length > 0 ? (
                   filteredInvestees.map((inv) => {
-                    const isAssigned = assignedIds.has(inv.id);
+                    const isAssigned = activeAssignedIds.has(inv.id);
                     return (
                       <TableRow
                         key={inv.id}
