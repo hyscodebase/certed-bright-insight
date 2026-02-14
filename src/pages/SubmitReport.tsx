@@ -85,6 +85,21 @@ const getRequiredFields = (isFirstReport: boolean): { key: RequiredField; label:
   return baseFields;
 };
 
+function formatReportPeriod(period: string): string {
+  if (/^\d{4}-Q\d$/.test(period)) {
+    const [year, q] = period.split("-Q");
+    return `${year}년 ${q}분기`;
+  } else if (/^\d{4}-H\d$/.test(period)) {
+    const [year, h] = period.split("-H");
+    return `${year}년 ${h === "1" ? "상반기" : "하반기"}`;
+  } else if (/^\d{4}$/.test(period)) {
+    return `${period}년`;
+  } else {
+    const [year, month] = period.split("-");
+    return `${year}년 ${parseInt(month)}월`;
+  }
+}
+
 export default function SubmitReport() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -380,7 +395,7 @@ export default function SubmitReport() {
                 </CardTitle>
               </div>
               <span className="rounded-md bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                {reportPeriod.split("-")[0]}년 {parseInt(reportPeriod.split("-")[1])}월
+                {formatReportPeriod(reportPeriod)}
               </span>
             </div>
           </CardHeader>
