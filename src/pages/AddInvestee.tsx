@@ -13,6 +13,7 @@ import { useCreateInvestee } from "@/hooks/useInvestees";
 import { useFunds, useAddInvesteeToFund, type Fund } from "@/hooks/useFunds";
 import { FundFormDialog } from "@/components/funds/FundFormDialog";
 import { useToast } from "@/hooks/use-toast";
+import { useDefaultReportFields } from "@/pages/ReportSettings";
 
 const FREQUENCY_OPTIONS = [
   { key: "monthly", label: "월간" },
@@ -55,15 +56,23 @@ export default function AddInvestee() {
   const createInvestee = useCreateInvestee();
   const { data: funds } = useFunds();
   const addInvesteeToFund = useAddInvesteeToFund();
+  const { data: defaultReportFields } = useDefaultReportFields();
 
-  // Report fields config: { monthly: [...], quarterly: [...], ... }
-  const [reportFieldsConfig, setReportFieldsConfig] = useState<ReportFieldsConfig>({
-    monthly: [...ALL_FIELD_KEYS],
-  });
-
-  const enabledFrequencies = useMemo(() => new Set(Object.keys(reportFieldsConfig)), [reportFieldsConfig]);
-
+  // Report fields config: initialized from user defaults
+  const [reportFieldsConfig, setReportFieldsConfig] = useState<ReportFieldsConfig | null>(null);
+  const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [selectedFrequencyTab, setSelectedFrequencyTab] = useState("monthly");
+
+  // Apply defaults once loaded
+  if (defaultReportFields && !defaultsApplied) {
+    setReportFieldsConfig(defaultReportFields);
+    setDefaultsApplied(true);
+    const firstFreq = FREQUENCY_OPTIONS.find(f => f.key in defaultReportFields);
+    if (firstFreq) setSelectedFrequencyTab(firstFreq.key);
+  }
+
+  const activeReportFieldsConfig = reportFieldsConfig ?? { monthly: [...ALL_FIELD_KEYS] };
+  const enabledFrequencies = useMemo(() => new Set(Object.keys(activeReportFieldsConfig)), [activeReportFieldsConfig]);
 
   const activeFrequencyTab = useMemo(() => {
     if (enabledFrequencies.has(selectedFrequencyTab)) return selectedFrequencyTab;
@@ -72,40 +81,36 @@ export default function AddInvestee() {
   }, [selectedFrequencyTab, enabledFrequencies]);
 
   const currentFrequencyFields = useMemo(
-    () => new Set<string>(reportFieldsConfig[activeFrequencyTab] ?? []),
-    [activeFrequencyTab, reportFieldsConfig]
+    () => new Set<string>(activeReportFieldsConfig[activeFrequencyTab] ?? []),
+    [activeFrequencyTab, activeReportFieldsConfig]
   );
 
   const handleToggleFrequency = useCallback((freqKey: string) => {
-    setReportFieldsConfig(prev => {
-      const next = { ...prev };
-      if (next[freqKey]) {
-        if (Object.keys(next).length <= 1) {
-          toast({ title: "최소 1개의 보고 주기를 선택해야 합니다.", variant: "destructive" });
-          return prev;
-        }
-        delete next[freqKey];
-        if (activeFrequencyTab === freqKey) {
-          setSelectedFrequencyTab(Object.keys(next)[0] || "monthly");
-        }
-      } else {
-        next[freqKey] = [...ALL_FIELD_KEYS];
+    const current = { ...activeReportFieldsConfig };
+    if (current[freqKey]) {
+      if (Object.keys(current).length <= 1) {
+        toast({ title: "최소 1개의 보고 주기를 선택해야 합니다.", variant: "destructive" });
+        return;
       }
-      return next;
-    });
-  }, [activeFrequencyTab, toast]);
+      delete current[freqKey];
+      if (activeFrequencyTab === freqKey) {
+        setSelectedFrequencyTab(Object.keys(current)[0] || "monthly");
+      }
+    } else {
+      current[freqKey] = [...ALL_FIELD_KEYS];
+    }
+    setReportFieldsConfig(current);
+  }, [activeReportFieldsConfig, activeFrequencyTab, toast]);
 
   const handleToggleReportField = useCallback((fieldKey: string) => {
-    setReportFieldsConfig(prev => {
-      const currentFields = new Set(prev[activeFrequencyTab] ?? []);
-      if (currentFields.has(fieldKey)) {
-        currentFields.delete(fieldKey);
-      } else {
-        currentFields.add(fieldKey);
-      }
-      return { ...prev, [activeFrequencyTab]: Array.from(currentFields) };
-    });
-  }, [activeFrequencyTab]);
+    const currentFields = new Set(activeReportFieldsConfig[activeFrequencyTab] ?? []);
+    if (currentFields.has(fieldKey)) {
+      currentFields.delete(fieldKey);
+    } else {
+      currentFields.add(fieldKey);
+    }
+    setReportFieldsConfig({ ...activeReportFieldsConfig, [activeFrequencyTab]: Array.from(currentFields) });
+  }, [activeReportFieldsConfig, activeFrequencyTab]);
 
   const isStep1Valid = companyName.trim() && email.trim();
   const totalSteps = funds && funds.length > 0 ? 3 : 2;
@@ -143,7 +148,7 @@ export default function AddInvestee() {
         contact_email: email,
         representative: representative.trim() || null,
         report_frequency: primaryFrequency,
-        report_fields: reportFieldsConfig,
+        report_fields: activeReportFieldsConfig,
       },
       {
         onSuccess: async (result) => {

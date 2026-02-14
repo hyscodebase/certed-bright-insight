@@ -186,6 +186,7 @@ export type Database = {
         Row: {
           company_name: string | null
           created_at: string
+          default_report_fields: Json
           display_name: string | null
           id: string
           updated_at: string
@@ -194,6 +195,7 @@ export type Database = {
         Insert: {
           company_name?: string | null
           created_at?: string
+          default_report_fields?: Json
           display_name?: string | null
           id?: string
           updated_at?: string
@@ -202,6 +204,7 @@ export type Database = {
         Update: {
           company_name?: string | null
           created_at?: string
+          default_report_fields?: Json
           display_name?: string | null
           id?: string
           updated_at?: string

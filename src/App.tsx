@@ -16,6 +16,7 @@ import FundList from "./pages/FundList";
 import FundDetail from "./pages/FundDetail";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import SubmitReport from "./pages/SubmitReport";
+import ReportSettings from "./pages/ReportSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -83,6 +84,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/report-settings"
+              element={
+                <ProtectedRoute>
+                  <ReportSettings />
                 </ProtectedRoute>
               }
             />
