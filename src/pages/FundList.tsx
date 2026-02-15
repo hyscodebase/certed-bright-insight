@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Briefcase, Plus, Pencil, ChevronRight } from "lucide-react";
+import { Briefcase, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,15 +10,21 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useFunds, useAllFundInvestees, type Fund } from "@/hooks/useFunds";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useFunds, useDeleteFund, useAllFundInvestees, type Fund } from "@/hooks/useFunds";
 import { FundFormDialog } from "@/components/funds/FundFormDialog";
 
 export default function FundList() {
   const navigate = useNavigate();
   const { data: funds, isLoading } = useFunds();
   const { data: allFundInvestees } = useAllFundInvestees();
+  const deleteFund = useDeleteFund();
   const [formOpen, setFormOpen] = useState(false);
   const [editingFund, setEditingFund] = useState<Fund | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Fund | null>(null);
 
   const getInvesteeCountForFund = (fundId: string) =>
     allFundInvestees?.filter((fi) => fi.fund_id === fundId).length || 0;
@@ -32,6 +38,12 @@ export default function FundList() {
     e.stopPropagation();
     setEditingFund(fund);
     setFormOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    await deleteFund.mutateAsync(deleteTarget.id);
+    setDeleteTarget(null);
   };
 
   return (
@@ -81,6 +93,9 @@ export default function FundList() {
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => handleOpenEdit(e, fund)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setDeleteTarget(fund); }}>
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         </div>
                       </TableCell>
@@ -103,6 +118,20 @@ export default function FundList() {
         editingFund={editingFund}
       />
 
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>펀드 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{deleteTarget?.name}" 펀드를 삭제하시겠습니까? 연결된 피투자사 매핑도 함께 삭제됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">삭제</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
