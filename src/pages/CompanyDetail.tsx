@@ -1,5 +1,6 @@
-import { useParams } from "react-router-dom";
-import { Building2, TrendingUp, DollarSign, RefreshCw, FileText, Send, Loader2, Briefcase, Plus, Pencil } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Building2, TrendingUp, DollarSign, RefreshCw, FileText, Send, Loader2, Briefcase, Plus, Pencil, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -13,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip,
 } from "recharts";
-import { useInvestee } from "@/hooks/useInvestees";
+import { useInvestee, useUpdateInvestee, useDeleteInvestee } from "@/hooks/useInvestees";
 import { useShareholderReports, useCreateReportRequest, useSendReportRequestEmail, type ShareholderReport } from "@/hooks/useShareholderReports";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useMemo, useCallback } from "react";
@@ -21,6 +22,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Settings2 } from "lucide-react";
 import { ReportDetailDialog } from "@/components/reports/ReportDetailDialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ReportRequestDialog } from "@/components/reports/ReportRequestDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,10 +76,13 @@ function formatPeriod(period: string): string {
 
 export default function CompanyDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { data: company, isLoading } = useInvestee(id || "");
   const { data: reports = [] } = useShareholderReports(id || "");
   const createReportRequest = useCreateReportRequest();
   const sendReportEmail = useSendReportRequestEmail();
+  const updateInvestee = useUpdateInvestee();
+  const deleteInvestee = useDeleteInvestee();
   const { toast } = useToast();
   const [isSendingRequest, setIsSendingRequest] = useState(false);
   const [selectedReport, setSelectedReport] = useState<ShareholderReport | null>(null);
@@ -84,6 +92,11 @@ export default function CompanyDetail() {
   const [editingFund, setEditingFund] = useState<Fund | null>(null);
   const [fundEditMode, setFundEditMode] = useState(false);
   const [reportFieldsEditMode, setReportFieldsEditMode] = useState(false);
+  const [companyEditMode, setCompanyEditMode] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [draftCompanyName, setDraftCompanyName] = useState("");
+  const [draftRepresentative, setDraftRepresentative] = useState("");
+  const [draftContactEmail, setDraftContactEmail] = useState("");
   const queryClient = useQueryClient();
 
   // --- Report Fields: local draft state ---
@@ -254,6 +267,34 @@ export default function CompanyDetail() {
 
   const investorCompanyName = investorProfile?.company_name || "투자사";
 
+  const handleStartCompanyEdit = () => {
+    setDraftCompanyName(company?.company_name || "");
+    setDraftRepresentative(company?.representative || "");
+    setDraftContactEmail(company?.contact_email || "");
+    setCompanyEditMode(true);
+  };
+
+  const handleSaveCompanyEdit = async () => {
+    if (!id || !draftCompanyName.trim()) return;
+    await updateInvestee.mutateAsync({
+      id,
+      company_name: draftCompanyName,
+      representative: draftRepresentative || null,
+      contact_email: draftContactEmail || null,
+    });
+    setCompanyEditMode(false);
+  };
+
+  const handleCancelCompanyEdit = () => {
+    setCompanyEditMode(false);
+  };
+
+  const handleDeleteInvestee = async () => {
+    if (!id) return;
+    await deleteInvestee.mutateAsync(id);
+    navigate("/investees");
+  };
+
   const handleReportClick = (report: ShareholderReport) => {
     setSelectedReport(report);
     setIsReportDialogOpen(true);
@@ -375,16 +416,56 @@ export default function CompanyDetail() {
       {/* Company Info Card */}
       <Card className="mb-6 animate-fade-in border-border shadow-sm">
         <CardHeader className="pb-4">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-muted-foreground" />
-            <CardTitle className="text-lg font-semibold">{company.company_name}</CardTitle>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-lg font-semibold">{company.company_name}</CardTitle>
+            </div>
+            <div className="flex items-center gap-2">
+              {companyEditMode ? (
+                <>
+                  <Button size="sm" variant="outline" onClick={handleCancelCompanyEdit}>취소</Button>
+                  <Button size="sm" onClick={handleSaveCompanyEdit} disabled={!draftCompanyName.trim() || updateInvestee.isPending}>
+                    {updateInvestee.isPending ? "저장 중..." : "저장"}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button size="sm" variant="outline" onClick={handleStartCompanyEdit}>
+                    <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                    수정
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => setDeleteDialogOpen(true)}>
+                    <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                    삭제
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            <InfoRow label="대표자" value={company.representative || "정보 없음"} />
-            <InfoRow label="담당자 이메일" value={company.contact_email || "정보 없음"} />
-          </div>
+          {companyEditMode ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>기업명 <span className="text-destructive">*</span></Label>
+                <Input value={draftCompanyName} onChange={(e) => setDraftCompanyName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>대표자</Label>
+                <Input value={draftRepresentative} onChange={(e) => setDraftRepresentative(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>담당자 이메일</Label>
+                <Input value={draftContactEmail} onChange={(e) => setDraftContactEmail(e.target.value)} type="email" />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <InfoRow label="대표자" value={company.representative || "정보 없음"} />
+              <InfoRow label="담당자 이메일" value={company.contact_email || "정보 없음"} />
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -826,6 +907,21 @@ export default function CompanyDetail() {
         onOpenChange={setFundFormOpen}
         editingFund={editingFund}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>피투자사 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{company.company_name}" 피투자사를 삭제하시겠습니까? 관련된 보고서 요청 및 데이터가 함께 삭제될 수 있습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteInvestee} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">삭제</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

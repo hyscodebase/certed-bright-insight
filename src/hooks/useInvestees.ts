@@ -103,3 +103,55 @@ export function useCreateInvestee() {
     },
   });
 }
+
+export function useUpdateInvestee() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (params: {
+      id: string;
+      company_name?: string;
+      contact_email?: string | null;
+      representative?: string | null;
+    }) => {
+      const { id, ...updates } = params;
+      const { data, error } = await supabase
+        .from("investees")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["investees"] });
+      queryClient.invalidateQueries({ queryKey: ["investee", data.id] });
+      toast({ title: "피투자사 정보가 수정되었습니다." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "수정 실패", description: error.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useDeleteInvestee() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (investeeId: string) => {
+      const { error } = await supabase.from("investees").delete().eq("id", investeeId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["investees"] });
+      queryClient.invalidateQueries({ queryKey: ["fund-investees-all"] });
+      toast({ title: "피투자사가 삭제되었습니다." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "삭제 실패", description: error.message, variant: "destructive" });
+    },
+  });
+}
