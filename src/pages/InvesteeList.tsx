@@ -1,4 +1,4 @@
-import { List, Plus, Send, Loader2, Pencil } from "lucide-react";
+import { List, Plus, Send, Loader2, Pencil, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useInvestees } from "@/hooks/useInvestees";
+import { useInvestees, useDeleteInvestee } from "@/hooks/useInvestees";
 import { useLatestReportStatus } from "@/hooks/useLatestReportStatus";
 import { useCreateReportRequest, useSendReportRequestEmail } from "@/hooks/useShareholderReports";
 import { useFunds, useAllFundInvestees } from "@/hooks/useFunds";
@@ -29,6 +29,10 @@ import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ReportRequestDialog } from "@/components/reports/ReportRequestDialog";
 import { InvesteeFormDialog } from "@/components/investees/InvesteeFormDialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -47,9 +51,11 @@ export default function InvesteeList() {
   const { data: allFundInvestees } = useAllFundInvestees();
   const createReportRequest = useCreateReportRequest();
   const sendReportEmail = useSendReportRequestEmail();
+  const deleteInvestee = useDeleteInvestee();
   const { toast } = useToast();
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [selectedFundFilter, setSelectedFundFilter] = useState<string>("all");
   const [editFormOpen, setEditFormOpen] = useState(false);
   const [editingInvestee, setEditingInvestee] = useState<{
@@ -270,6 +276,17 @@ export default function InvesteeList() {
                       >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteTarget({ id: company.id, name: company.company_name });
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -308,6 +325,31 @@ export default function InvesteeList() {
         onOpenChange={setEditFormOpen}
         investee={editingInvestee}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>피투자사 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{deleteTarget?.name}" 피투자사를 삭제하시겠습니까? 관련된 보고서 요청 및 데이터가 함께 삭제될 수 있습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (deleteTarget) {
+                  await deleteInvestee.mutateAsync(deleteTarget.id);
+                  setDeleteTarget(null);
+                }
+              }}
+            >
+              삭제
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
