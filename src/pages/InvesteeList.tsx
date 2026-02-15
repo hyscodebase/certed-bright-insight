@@ -1,4 +1,4 @@
-import { List, Plus, Send, Loader2, Pencil, Trash2 } from "lucide-react";
+import { List, Plus, Send, Loader2, Pencil, Trash2, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -203,7 +203,7 @@ export default function InvesteeList() {
                 <TableHead className="font-medium text-foreground">보고 주기</TableHead>
                 <TableHead className="font-medium text-foreground">제출 상태</TableHead>
                 <TableHead className="font-medium text-foreground">보고서 요청</TableHead>
-                <TableHead className="w-[60px] font-medium text-foreground">관리</TableHead>
+                <TableHead className="w-[120px] font-medium text-foreground">관리</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -287,6 +287,7 @@ export default function InvesteeList() {
                       >
                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
                       </Button>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ))
