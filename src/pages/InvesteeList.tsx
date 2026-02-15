@@ -1,4 +1,4 @@
-import { List, Plus, Send, Loader2 } from "lucide-react";
+import { List, Plus, Send, Loader2, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -28,6 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ReportRequestDialog } from "@/components/reports/ReportRequestDialog";
+import { InvesteeFormDialog } from "@/components/investees/InvesteeFormDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -50,6 +51,13 @@ export default function InvesteeList() {
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedFundFilter, setSelectedFundFilter] = useState<string>("all");
+  const [editFormOpen, setEditFormOpen] = useState(false);
+  const [editingInvestee, setEditingInvestee] = useState<{
+    id: string;
+    company_name: string;
+    representative: string | null;
+    contact_email: string | null;
+  } | null>(null);
   const [selectedInvestee, setSelectedInvestee] = useState<{
     id: string;
     companyName: string;
@@ -184,17 +192,18 @@ export default function InvesteeList() {
           <Table>
             <TableHeader>
               <TableRow className="border-t">
-                <TableHead className="w-[30%] pl-6 font-medium text-foreground">기업명</TableHead>
+                <TableHead className="w-[25%] pl-6 font-medium text-foreground">기업명</TableHead>
                 <TableHead className="font-medium text-foreground">펀드</TableHead>
                 <TableHead className="font-medium text-foreground">보고 주기</TableHead>
                 <TableHead className="font-medium text-foreground">제출 상태</TableHead>
                 <TableHead className="font-medium text-foreground">보고서 요청</TableHead>
+                <TableHead className="w-[60px] font-medium text-foreground">관리</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24">
+                  <TableCell colSpan={6} className="h-24">
                     <div className="space-y-2">
                       <Skeleton className="h-4 w-full" />
                       <Skeleton className="h-4 w-3/4" />
@@ -243,11 +252,30 @@ export default function InvesteeList() {
                         )}
                       </Button>
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingInvestee({
+                            id: company.id,
+                            company_name: company.company_name,
+                            representative: company.representative,
+                            contact_email: company.contact_email,
+                          });
+                          setEditFormOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                     {selectedFundFilter !== "all" ? "해당 펀드에 속한 피투자사가 없습니다." : "등록된 피투자사가 없습니다."}
                     <button
                       onClick={() => navigate("/add-investee")}
@@ -274,6 +302,12 @@ export default function InvesteeList() {
           reportFieldsConfig={selectedInvestee.reportFields}
         />
       )}
+
+      <InvesteeFormDialog
+        open={editFormOpen}
+        onOpenChange={setEditFormOpen}
+        investee={editingInvestee}
+      />
     </DashboardLayout>
   );
 }
