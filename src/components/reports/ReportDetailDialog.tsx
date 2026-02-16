@@ -1,4 +1,4 @@
-import { ChevronLeft, Users, DollarSign, FileText } from "lucide-react";
+import { ChevronLeft, Users, DollarSign, FileText, TrendingUp } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -43,18 +43,32 @@ function formatPeriod(period: string): string {
   return `${year}년 ${parseInt(month)}월`;
 }
 
+function parseJsonList(value: any): string[] {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed.map(String);
+    } catch {
+      return value ? [value] : [];
+    }
+  }
+  return [];
+}
+
 export function ReportDetailDialog({ report, open, onOpenChange, companyName }: ReportDetailDialogProps) {
   if (!report) return null;
 
   const totalExpense = report.fixed_costs + report.variable_costs;
-  
-  // 단일 보고서 데이터로 차트 생성
   const month = report.report_period.split("-")[1] + "월";
   
   const mauChartData = report.mau !== null ? [{ month, value: report.mau }] : [];
   const dauChartData = report.dau !== null ? [{ month, value: report.dau }] : [];
   const paidCustomerChartData = report.paid_customer_count !== null ? [{ month, value: report.paid_customer_count }] : [];
   const revenueChartData = [{ month, value: report.monthly_revenue / 10000 }];
+
+  const problemsRisks = parseJsonList(report.problems_risks);
+  const currentStatus = parseJsonList(report.current_status);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -91,30 +105,9 @@ export function ReportDetailDialog({ report, open, onOpenChange, companyName }: 
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                      {/* MAU */}
-                      <MetricCard
-                        label="MAU (월간 활성 사용자)"
-                        value={report.mau !== null ? report.mau.toLocaleString() : "-"}
-                        unit="명"
-                        chartData={mauChartData}
-                        chartUnit="명"
-                      />
-                      {/* DAU */}
-                      <MetricCard
-                        label="DAU (일간 활성 사용자)"
-                        value={report.dau !== null ? report.dau.toLocaleString() : "-"}
-                        unit="명"
-                        chartData={dauChartData}
-                        chartUnit="명"
-                      />
-                      {/* Paid Customers */}
-                      <MetricCard
-                        label="유료 고객 수"
-                        value={report.paid_customer_count !== null ? report.paid_customer_count.toLocaleString() : "-"}
-                        unit="명"
-                        chartData={paidCustomerChartData}
-                        chartUnit="명"
-                      />
+                      <MetricCard label="MAU (월간 활성 사용자)" value={report.mau !== null ? report.mau.toLocaleString() : "-"} unit="명" chartData={mauChartData} chartUnit="명" />
+                      <MetricCard label="DAU (일간 활성 사용자)" value={report.dau !== null ? report.dau.toLocaleString() : "-"} unit="명" chartData={dauChartData} chartUnit="명" />
+                      <MetricCard label="유료 고객 수" value={report.paid_customer_count !== null ? report.paid_customer_count.toLocaleString() : "-"} unit="명" chartData={paidCustomerChartData} chartUnit="명" />
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -125,27 +118,9 @@ export function ReportDetailDialog({ report, open, onOpenChange, companyName }: 
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                      <MetricCard
-                        label="계약 수"
-                        value={report.contract_count !== null ? report.contract_count.toLocaleString() : "-"}
-                        unit="건"
-                        chartData={report.contract_count !== null ? [{ month, value: report.contract_count }] : []}
-                        chartUnit="건"
-                      />
-                      <MetricCard
-                        label="월 매출"
-                        value={formatCurrencyShort(report.monthly_revenue)}
-                        unit=""
-                        chartData={revenueChartData}
-                        chartUnit="만원"
-                      />
-                      <MetricCard
-                        label="평균 계약 단가"
-                        value={report.average_contract_value !== null ? formatCurrencyShort(report.average_contract_value) : "-"}
-                        unit=""
-                        chartData={report.average_contract_value !== null ? [{ month, value: report.average_contract_value / 10000 }] : []}
-                        chartUnit="만원"
-                      />
+                      <MetricCard label="계약 수" value={report.contract_count !== null ? report.contract_count.toLocaleString() : "-"} unit="건" chartData={report.contract_count !== null ? [{ month, value: report.contract_count }] : []} chartUnit="건" />
+                      <MetricCard label="월 매출" value={formatCurrencyShort(report.monthly_revenue)} unit="" chartData={revenueChartData} chartUnit="만원" />
+                      <MetricCard label="평균 계약 단가" value={report.average_contract_value !== null ? formatCurrencyShort(report.average_contract_value) : "-"} unit="" chartData={report.average_contract_value !== null ? [{ month, value: report.average_contract_value / 10000 }] : []} chartUnit="만원" />
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -155,21 +130,22 @@ export function ReportDetailDialog({ report, open, onOpenChange, companyName }: 
                     획득 지표
                   </AccordionTrigger>
                   <AccordionContent>
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                      <MetricCard label="전환율" value={report.conversion_rate !== null ? `${report.conversion_rate}%` : "-"} unit="" chartData={report.conversion_rate !== null ? [{ month, value: report.conversion_rate }] : []} chartUnit="%" />
+                      <MetricCard label="CAC (고객 획득 비용)" value={report.cac !== null ? formatCurrencyShort(report.cac) : "-"} unit="" chartData={report.cac !== null ? [{ month, value: report.cac / 10000 }] : []} chartUnit="만원" />
+                      <MetricCard label="ARPPU" value={report.arppu !== null ? formatCurrencyShort(report.arppu) : "-"} unit="" chartData={report.arppu !== null ? [{ month, value: report.arppu / 10000 }] : []} chartUnit="만원" />
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem value="saas-metrics" className="border-b-0">
+                  <AccordionTrigger className="py-3 text-sm font-semibold text-primary hover:no-underline">
+                    SaaS 지표
+                  </AccordionTrigger>
+                  <AccordionContent>
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                      <MetricCard
-                        label="전환율"
-                        value={report.conversion_rate !== null ? `${report.conversion_rate}%` : "-"}
-                        unit=""
-                        chartData={report.conversion_rate !== null ? [{ month, value: report.conversion_rate }] : []}
-                        chartUnit="%"
-                      />
-                      <MetricCard
-                        label="CAC (고객 획득 비용)"
-                        value={report.cac !== null ? formatCurrencyShort(report.cac) : "-"}
-                        unit=""
-                        chartData={report.cac !== null ? [{ month, value: report.cac / 10000 }] : []}
-                        chartUnit="만원"
-                      />
+                      <MetricCard label="MRR (월간 반복 매출)" value={report.mrr !== null ? formatCurrencyShort(report.mrr) : "-"} unit="" chartData={report.mrr !== null ? [{ month, value: report.mrr / 10000 }] : []} chartUnit="만원" />
+                      <MetricCard label="ARR (연간 반복 매출)" value={report.arr !== null ? formatCurrencyShort(report.arr) : "-"} unit="" chartData={report.arr !== null ? [{ month, value: report.arr / 10000 }] : []} chartUnit="만원" />
                     </div>
                   </AccordionContent>
                 </AccordionItem>
@@ -187,78 +163,87 @@ export function ReportDetailDialog({ report, open, onOpenChange, companyName }: 
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                {/* Cash Balance */}
                 <div className="rounded-lg bg-muted/50 p-4">
                   <span className="text-sm text-muted-foreground">현금 잔고</span>
-                  <p className="mt-1 text-xl font-bold text-primary">
-                    {formatCurrencyShort(report.cash_balance)}
-                  </p>
+                  <p className="mt-1 text-xl font-bold text-primary">{formatCurrencyShort(report.cash_balance)}</p>
                 </div>
-
-                {/* Revenue */}
                 <div className="rounded-lg bg-muted/50 p-4">
                   <span className="text-sm text-muted-foreground">월 매출</span>
-                  <p className="mt-1 text-xl font-bold text-primary">
-                    {formatCurrencyShort(report.monthly_revenue)}
-                  </p>
+                  <p className="mt-1 text-xl font-bold text-primary">{formatCurrencyShort(report.monthly_revenue)}</p>
                 </div>
-
-                {/* Cumulative Revenue */}
                 <div className="rounded-lg bg-muted/50 p-4">
                   <span className="text-sm text-muted-foreground">누적 매출</span>
-                  <p className="mt-1 text-xl font-bold text-primary">
-                    {formatCurrencyShort(report.cumulative_revenue)}
-                  </p>
+                  <p className="mt-1 text-xl font-bold text-primary">{formatCurrencyShort(report.cumulative_revenue)}</p>
                 </div>
-
-                {/* Runway */}
                 <div className="rounded-lg bg-muted/50 p-4">
                   <span className="text-sm text-muted-foreground">Runway</span>
-                  <p className="mt-1 text-xl font-bold text-primary">
-                    {report.runway_months}개월
-                  </p>
+                  <p className="mt-1 text-xl font-bold text-primary">{report.runway_months}개월</p>
                 </div>
               </div>
 
               <Separator className="my-6" />
 
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                {/* Fixed Costs */}
                 <div>
                   <span className="text-sm text-muted-foreground">고정비</span>
-                  <p className="mt-1 text-lg font-semibold text-destructive">
-                    {formatCurrencyShort(report.fixed_costs)}
-                  </p>
+                  <p className="mt-1 text-lg font-semibold text-destructive">{formatCurrencyShort(report.fixed_costs)}</p>
                 </div>
-
-                {/* Variable Costs */}
                 <div>
                   <span className="text-sm text-muted-foreground">변동비</span>
-                  <p className="mt-1 text-lg font-semibold text-destructive">
-                    {formatCurrencyShort(report.variable_costs)}
-                  </p>
+                  <p className="mt-1 text-lg font-semibold text-destructive">{formatCurrencyShort(report.variable_costs)}</p>
                 </div>
-
-                {/* Total Expenses */}
                 <div>
                   <span className="text-sm text-muted-foreground">총 지출</span>
-                  <p className="mt-1 text-lg font-semibold text-destructive">
-                    {formatCurrencyShort(totalExpense)}
-                  </p>
+                  <p className="mt-1 text-lg font-semibold text-destructive">{formatCurrencyShort(totalExpense)}</p>
                 </div>
               </div>
 
               <Separator className="my-6" />
 
-              {/* Employee Count Change */}
-              <div>
-                <span className="text-sm text-muted-foreground">인원 수 변화</span>
-                <p className={`mt-1 text-lg font-semibold ${report.employee_count_change >= 0 ? "text-primary" : "text-destructive"}`}>
-                  {report.employee_count_change > 0 ? "+" : ""}{report.employee_count_change}명
-                </p>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <div>
+                  <span className="text-sm text-muted-foreground">인원 수 변화</span>
+                  <p className={`mt-1 text-lg font-semibold ${report.employee_count_change >= 0 ? "text-primary" : "text-destructive"}`}>
+                    {report.employee_count_change > 0 ? "+" : ""}{report.employee_count_change}명
+                  </p>
+                </div>
+                {report.remaining_gov_subsidy !== null && (
+                  <div>
+                    <span className="text-sm text-muted-foreground">잔여 정부지원금</span>
+                    <p className="mt-1 text-lg font-semibold text-primary">{formatCurrencyShort(report.remaining_gov_subsidy)}</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
+
+          {/* Investment Metrics */}
+          {(report.total_shares_issued !== null || report.latest_price_per_share !== null) && (
+            <Card className="border-border">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle className="text-base font-semibold">투자 지표</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  {report.total_shares_issued !== null && (
+                    <div className="rounded-lg bg-muted/50 p-4">
+                      <span className="text-sm text-muted-foreground">총발행주식수</span>
+                      <p className="mt-1 text-xl font-bold text-primary">{report.total_shares_issued.toLocaleString()}주</p>
+                    </div>
+                  )}
+                  {report.latest_price_per_share !== null && (
+                    <div className="rounded-lg bg-muted/50 p-4">
+                      <span className="text-sm text-muted-foreground">최신 주당가격</span>
+                      <p className="mt-1 text-xl font-bold text-primary">{formatCurrencyShort(report.latest_price_per_share)}</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Monthly Key Issues */}
           <Card className="border-border">
@@ -276,13 +261,40 @@ export function ReportDetailDialog({ report, open, onOpenChange, companyName }: 
                 </div>
                 <Separator />
                 <div>
-                  <h4 className="text-sm font-semibold text-primary">다음 달 중요한 의사결정 포인트</h4>
-                  <p className="mt-2 whitespace-pre-wrap text-sm">{report.next_month_decisions || "등록된 내용이 없습니다."}</p>
+                  <h4 className="text-sm font-semibold text-primary">현황</h4>
+                  {currentStatus.length > 0 ? (
+                    <ul className="mt-2 space-y-1.5">
+                      {currentStatus.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground">등록된 내용이 없습니다.</p>
+                  )}
                 </div>
                 <Separator />
                 <div>
                   <h4 className="text-sm font-semibold text-primary">문제/리스크</h4>
-                  <p className="mt-2 whitespace-pre-wrap text-sm">{report.problems_risks || "등록된 내용이 없습니다."}</p>
+                  {problemsRisks.length > 0 ? (
+                    <ul className="mt-2 space-y-1.5">
+                      {problemsRisks.map((item, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-sm text-muted-foreground">등록된 내용이 없습니다.</p>
+                  )}
+                </div>
+                <Separator />
+                <div>
+                  <h4 className="text-sm font-semibold text-primary">다음 달 중요한 의사결정 포인트</h4>
+                  <p className="mt-2 whitespace-pre-wrap text-sm">{report.next_month_decisions || "등록된 내용이 없습니다."}</p>
                 </div>
                 <Separator />
                 <div>
@@ -295,26 +307,6 @@ export function ReportDetailDialog({ report, open, onOpenChange, companyName }: 
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function InfoRow({
-  label,
-  value,
-  subtext,
-}: {
-  label: string;
-  value: string;
-  subtext?: string;
-}) {
-  return (
-    <div className="flex gap-4">
-      <span className="w-20 shrink-0 text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium">
-        {value}
-        {subtext && <span className="ml-1 text-xs text-muted-foreground">{subtext}</span>}
-      </span>
-    </div>
   );
 }
 

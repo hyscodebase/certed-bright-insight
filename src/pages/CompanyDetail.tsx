@@ -680,7 +680,25 @@ export default function CompanyDetail() {
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">문제/리스크</span>
-              <p className="mt-1 text-sm">{latestReport.problems_risks}</p>
+              {(() => {
+                const items = Array.isArray(latestReport.problems_risks)
+                  ? latestReport.problems_risks.map(String)
+                  : typeof latestReport.problems_risks === "string"
+                    ? (() => { try { const p = JSON.parse(latestReport.problems_risks); return Array.isArray(p) ? p.map(String) : [latestReport.problems_risks]; } catch { return [latestReport.problems_risks]; } })()
+                    : [];
+                return items.length > 0 ? (
+                  <ul className="mt-1 space-y-1">
+                    {items.map((item: string, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">등록된 내용이 없습니다.</p>
+                );
+              })()}
             </div>
             <div>
               <span className="text-sm font-medium text-muted-foreground">주주 의견 필요 사안</span>
