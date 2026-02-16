@@ -43,17 +43,38 @@ function formatPeriod(period: string): string {
   return `${year}년 ${parseInt(month)}월`;
 }
 
-function parseJsonList(value: any): string[] {
-  if (Array.isArray(value)) return value.map(String);
-  if (typeof value === "string") {
+interface ListItem {
+  category: string;
+  content: string;
+}
+
+function parseJsonList(value: any): ListItem[] {
+  let arr: any[] = [];
+  if (Array.isArray(value)) {
+    arr = value;
+  } else if (typeof value === "string") {
     try {
       const parsed = JSON.parse(value);
-      if (Array.isArray(parsed)) return parsed.map(String);
+      if (Array.isArray(parsed)) arr = parsed;
+      else return value ? [{ category: "기타", content: value }] : [];
     } catch {
-      return value ? [value] : [];
+      return value ? [{ category: "기타", content: value }] : [];
     }
   }
-  return [];
+  // Handle both old string[] and new {category, content}[] formats
+  return arr.map((item) =>
+    typeof item === "string"
+      ? { category: "기타", content: item }
+      : { category: item.category || "기타", content: item.content || String(item) }
+  );
+}
+
+function groupByCategory(items: ListItem[]): Record<string, string[]> {
+  return items.reduce<Record<string, string[]>>((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = [];
+    acc[item.category].push(item.content);
+    return acc;
+  }, {});
 }
 
 export function ReportDetailDialog({ report, open, onOpenChange, companyName }: ReportDetailDialogProps) {
@@ -263,14 +284,21 @@ export function ReportDetailDialog({ report, open, onOpenChange, companyName }: 
                 <div>
                   <h4 className="text-sm font-semibold text-primary">현황</h4>
                   {currentStatus.length > 0 ? (
-                    <ul className="mt-2 space-y-1.5">
-                      {currentStatus.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm">
-                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                          {item}
-                        </li>
+                    <div className="mt-2 space-y-3">
+                      {Object.entries(groupByCategory(currentStatus)).map(([cat, contents]) => (
+                        <div key={cat}>
+                          <span className="text-xs font-semibold text-muted-foreground">{cat}</span>
+                          <ul className="mt-1 space-y-1">
+                            {contents.map((c, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm">
+                                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                                <span className="whitespace-pre-wrap">{c}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   ) : (
                     <p className="mt-2 text-sm text-muted-foreground">등록된 내용이 없습니다.</p>
                   )}
@@ -279,14 +307,21 @@ export function ReportDetailDialog({ report, open, onOpenChange, companyName }: 
                 <div>
                   <h4 className="text-sm font-semibold text-primary">문제/리스크</h4>
                   {problemsRisks.length > 0 ? (
-                    <ul className="mt-2 space-y-1.5">
-                      {problemsRisks.map((item, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm">
-                          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
-                          {item}
-                        </li>
+                    <div className="mt-2 space-y-3">
+                      {Object.entries(groupByCategory(problemsRisks)).map(([cat, contents]) => (
+                        <div key={cat}>
+                          <span className="text-xs font-semibold text-muted-foreground">{cat}</span>
+                          <ul className="mt-1 space-y-1">
+                            {contents.map((c, i) => (
+                              <li key={i} className="flex items-start gap-2 text-sm">
+                                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                                <span className="whitespace-pre-wrap">{c}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   ) : (
                     <p className="mt-2 text-sm text-muted-foreground">등록된 내용이 없습니다.</p>
                   )}
