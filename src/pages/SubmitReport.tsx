@@ -8,11 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ListFieldInput } from "@/components/reports/ListFieldInput";
 
 interface ReportFormData {
   // Required fields
   monthly_summary: string;
-  problems_risks: string;
   next_month_decisions: string;
   shareholder_input_needed: string;
   monthly_revenue: string;
@@ -29,11 +29,16 @@ interface ReportFormData {
   dau: string;
   conversion_rate: string;
   cac: string;
+  arppu: string;
+  mrr: string;
+  arr: string;
+  remaining_gov_subsidy: string;
+  total_shares_issued: string;
+  latest_price_per_share: string;
 }
 
 const initialFormData: ReportFormData = {
   monthly_summary: "",
-  problems_risks: "",
   next_month_decisions: "",
   shareholder_input_needed: "",
   monthly_revenue: "",
@@ -49,6 +54,12 @@ const initialFormData: ReportFormData = {
   dau: "",
   conversion_rate: "",
   cac: "",
+  arppu: "",
+  mrr: "",
+  arr: "",
+  remaining_gov_subsidy: "",
+  total_shares_issued: "",
+  latest_price_per_share: "",
 };
 
 type RequiredField = keyof ReportFormData;
@@ -61,13 +72,17 @@ const OPTIONAL_FIELD_LABELS: Record<string, string> = {
   dau: "DAU",
   conversion_rate: "전환율",
   cac: "CAC",
+  arppu: "ARPPU",
+  mrr: "MRR",
+  arr: "ARR",
+  remaining_gov_subsidy: "잔여 정부지원금",
+  total_shares_issued: "총발행주식수",
+  latest_price_per_share: "최신 주당가격",
 };
 
-// Required fields are dynamically determined based on whether this is the first report + enabled optional fields
 const getRequiredFields = (isFirstReport: boolean, enabledOptional: Set<string>): { key: RequiredField; label: string }[] => {
   const baseFields: { key: RequiredField; label: string }[] = [
     { key: "monthly_summary", label: "이번 달 한 줄 요약" },
-    { key: "problems_risks", label: "문제/리스크" },
     { key: "next_month_decisions", label: "다음 달 중요한 의사결정 포인트" },
     { key: "shareholder_input_needed", label: "주주 의견이 필요한 사안" },
     { key: "monthly_revenue", label: "월 매출" },
@@ -81,7 +96,6 @@ const getRequiredFields = (isFirstReport: boolean, enabledOptional: Set<string>)
     baseFields.push({ key: "cash_balance", label: "현금 잔고" });
   }
 
-  // Add enabled optional fields as required
   for (const fieldKey of enabledOptional) {
     if (OPTIONAL_FIELD_LABELS[fieldKey]) {
       baseFields.push({ key: fieldKey as RequiredField, label: OPTIONAL_FIELD_LABELS[fieldKey] });
@@ -126,6 +140,10 @@ export default function SubmitReport() {
     new Set(["contract_count", "paid_customer_count", "average_contract_value", "mau", "dau", "conversion_rate", "cac"])
   );
 
+  // List-based fields
+  const [problemsRisksList, setProblemsRisksList] = useState<string[]>([]);
+  const [currentStatusList, setCurrentStatusList] = useState<string[]>([]);
+
   useEffect(() => {
     async function validateToken() {
       if (!token) {
@@ -163,12 +181,10 @@ export default function SubmitReport() {
         setCompanyName(investee?.company_name || "");
         setInvesteeId(investee?.id || "");
         
-        // Set enabled optional fields: request-level overrides investee-level
         const requestFields = (data as any).report_fields;
         if (requestFields && Array.isArray(requestFields)) {
           setEnabledOptionalFields(new Set(requestFields));
         } else if (investee?.report_fields) {
-          // Frequency-based config (jsonb object) or legacy flat array
           const rf = investee.report_fields;
           const freq = investee.report_frequency || "monthly";
           if (typeof rf === "object" && !Array.isArray(rf) && rf[freq]) {
@@ -178,7 +194,6 @@ export default function SubmitReport() {
           }
         }
         
-        // Use the requested report period, fallback to current month if not set
         if (data.report_period) {
           setReportPeriod(data.report_period);
         } else {
@@ -186,7 +201,6 @@ export default function SubmitReport() {
           setReportPeriod(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
         }
 
-        // Fetch previous report data (cumulative revenue and cash balance)
         if (investee?.id) {
           const { data: reportsData } = await supabase
             .from("shareholder_reports")
@@ -200,8 +214,6 @@ export default function SubmitReport() {
             setPreviousCumulativeRevenue(reportsData[0].cumulative_revenue || 0);
             setPreviousCashBalance(prevCash);
             setIsFirstReport(false);
-            // Set default cash_balance calculated from previous data
-            // Will be updated when user changes revenue/costs
             setFormData(prev => ({ ...prev, cash_balance: String(prevCash) }));
           } else {
             setIsFirstReport(true);
@@ -225,15 +237,17 @@ export default function SubmitReport() {
   const requiredFields = getRequiredFields(isFirstReport, enabledOptionalFields);
 
   const getMissingRequiredFields = (): string[] => {
-    return requiredFields
-      .filter(({ key }) => {
-        const value = formData[key];
-        if (typeof value === "string") {
-          return !value.trim();
-        }
-        return !value;
-      })
-      .map(({ label }) => label);
+    const missing: string[] = [];
+    for (const { key, label } of requiredFields) {
+      const value = formData[key];
+      if (typeof value === "string" && !value.trim()) {
+        missing.push(label);
+      }
+    }
+    // List fields validation
+    if (problemsRisksList.length === 0) missing.push("문제/리스크");
+    if (currentStatusList.length === 0) missing.push("현황");
+    return missing;
   };
 
   const isRequiredFieldsFilled = () => {
@@ -249,14 +263,10 @@ export default function SubmitReport() {
     return !value;
   };
 
-  // Calculate cumulative revenue automatically
   const calculatedCumulativeRevenue = previousCumulativeRevenue + (parseInt(formData.monthly_revenue) || 0);
 
-  // Calculate default cash balance for non-first reports
-  // Formula: previous cash balance + this month revenue - fixed costs - variable costs
   const defaultCashBalance = (previousCashBalance || 0) + (parseInt(formData.monthly_revenue) || 0) - (parseInt(formData.fixed_costs) || 0) - (parseInt(formData.variable_costs) || 0);
 
-  // Update cash_balance default when revenue/costs change (only if user hasn't manually edited it)
   const hasTouchedCashBalance = touchedFields.has("cash_balance");
   useEffect(() => {
     if (!isFirstReport && !hasTouchedCashBalance) {
@@ -264,7 +274,6 @@ export default function SubmitReport() {
     }
   }, [formData.monthly_revenue, formData.fixed_costs, formData.variable_costs, isFirstReport, defaultCashBalance, hasTouchedCashBalance]);
 
-  // Actual cash balance to submit (user input value)
   const finalCashBalance = parseInt(formData.cash_balance) || 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -287,7 +296,7 @@ export default function SubmitReport() {
         p_request_token: token!,
         p_report_period: reportPeriod,
         p_monthly_summary: formData.monthly_summary,
-        p_problems_risks: formData.problems_risks,
+        p_problems_risks: JSON.stringify(problemsRisksList),
         p_next_month_decisions: formData.next_month_decisions,
         p_shareholder_input_needed: formData.shareholder_input_needed,
         p_monthly_revenue: parseInt(formData.monthly_revenue) || 0,
@@ -304,7 +313,14 @@ export default function SubmitReport() {
         p_dau: formData.dau ? parseInt(formData.dau) : null,
         p_conversion_rate: formData.conversion_rate ? parseFloat(formData.conversion_rate) : null,
         p_cac: formData.cac ? parseInt(formData.cac) : null,
-      });
+        p_arppu: formData.arppu ? parseInt(formData.arppu) : null,
+        p_mrr: formData.mrr ? parseInt(formData.mrr) : null,
+        p_arr: formData.arr ? parseInt(formData.arr) : null,
+        p_remaining_gov_subsidy: formData.remaining_gov_subsidy ? parseInt(formData.remaining_gov_subsidy) : null,
+        p_total_shares_issued: formData.total_shares_issued ? parseInt(formData.total_shares_issued) : null,
+        p_latest_price_per_share: formData.latest_price_per_share ? parseInt(formData.latest_price_per_share) : null,
+        p_current_status: JSON.stringify(currentStatusList),
+      } as any);
 
       const result = data as { success: boolean; error?: string };
 
@@ -388,6 +404,25 @@ export default function SubmitReport() {
     );
   }
 
+  const renderOptionalField = (fieldKey: string, label: string, unit: string, step?: string) => {
+    if (!enabledOptionalFields.has(fieldKey)) return null;
+    return (
+      <div className="space-y-2" key={fieldKey}>
+        <Label htmlFor={fieldKey}>{label}{unit ? ` (${unit})` : ""} <span className="text-destructive">*</span></Label>
+        <Input
+          id={fieldKey}
+          type="number"
+          step={step}
+          placeholder="0"
+          value={formData[fieldKey as keyof ReportFormData]}
+          onChange={(e) => handleInputChange(fieldKey as keyof ReportFormData, e.target.value)}
+          className={isFieldInvalid(fieldKey as RequiredField) ? "border-destructive" : ""}
+        />
+        {isFieldInvalid(fieldKey as RequiredField) && <p className="text-xs text-destructive">필수 항목입니다</p>}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-background p-4 py-8">
       <div className="mx-auto max-w-2xl">
@@ -407,13 +442,13 @@ export default function SubmitReport() {
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Required Fields Section */}
               <div className="space-y-6">
                 <h3 className="text-base font-semibold text-foreground">
                   필수 항목 <span className="text-destructive">*</span>
                 </h3>
 
                 <div className="space-y-4">
+                  {/* Monthly Summary */}
                   <div className="space-y-2">
                     <Label htmlFor="monthly_summary">
                       이번 달 한 줄 요약 <span className="text-destructive">*</span>
@@ -430,21 +465,25 @@ export default function SubmitReport() {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="problems_risks">
-                      문제/리스크 <span className="text-destructive">*</span>
-                    </Label>
-                    <Textarea
-                      id="problems_risks"
-                      placeholder="현재 직면한 문제점이나 리스크를 작성해주세요"
-                      value={formData.problems_risks}
-                      onChange={(e) => handleInputChange("problems_risks", e.target.value)}
-                      className={`min-h-[80px] ${isFieldInvalid("problems_risks") ? "border-destructive" : ""}`}
-                    />
-                    {isFieldInvalid("problems_risks") && (
-                      <p className="text-xs text-destructive">필수 항목입니다</p>
-                    )}
-                  </div>
+                  {/* Problems/Risks - List based */}
+                  <ListFieldInput
+                    label="문제/리스크"
+                    required
+                    items={problemsRisksList}
+                    onChange={setProblemsRisksList}
+                    placeholder="문제점이나 리스크를 입력 후 Enter"
+                    isInvalid={showValidationErrors && problemsRisksList.length === 0}
+                  />
+
+                  {/* Current Status - List based */}
+                  <ListFieldInput
+                    label="현황"
+                    required
+                    items={currentStatusList}
+                    onChange={setCurrentStatusList}
+                    placeholder="현재 상황을 입력 후 Enter"
+                    isInvalid={showValidationErrors && currentStatusList.length === 0}
+                  />
 
                   <div className="space-y-2">
                     <Label htmlFor="next_month_decisions">
@@ -479,6 +518,7 @@ export default function SubmitReport() {
                   </div>
                 </div>
 
+                {/* Financial fields */}
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="monthly_revenue">
@@ -601,111 +641,20 @@ export default function SubmitReport() {
                     )}
                   </div>
 
-                  {enabledOptionalFields.has("contract_count") && (
-                  <div className="space-y-2">
-                    <Label htmlFor="contract_count">계약 수 <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="contract_count"
-                      type="number"
-                      placeholder="0"
-                      value={formData.contract_count}
-                      onChange={(e) => handleInputChange("contract_count", e.target.value)}
-                      className={isFieldInvalid("contract_count") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("contract_count") && <p className="text-xs text-destructive">필수 항목입니다</p>}
-                  </div>
-                  )}
-
-                  {enabledOptionalFields.has("paid_customer_count") && (
-                  <div className="space-y-2">
-                    <Label htmlFor="paid_customer_count">유료 고객 수 <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="paid_customer_count"
-                      type="number"
-                      placeholder="0"
-                      value={formData.paid_customer_count}
-                      onChange={(e) => handleInputChange("paid_customer_count", e.target.value)}
-                      className={isFieldInvalid("paid_customer_count") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("paid_customer_count") && <p className="text-xs text-destructive">필수 항목입니다</p>}
-                  </div>
-                  )}
-
-                  {enabledOptionalFields.has("average_contract_value") && (
-                  <div className="space-y-2">
-                    <Label htmlFor="average_contract_value">평균 계약 단가 (원) <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="average_contract_value"
-                      type="number"
-                      placeholder="0"
-                      value={formData.average_contract_value}
-                      onChange={(e) => handleInputChange("average_contract_value", e.target.value)}
-                      className={isFieldInvalid("average_contract_value") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("average_contract_value") && <p className="text-xs text-destructive">필수 항목입니다</p>}
-                  </div>
-                  )}
-
-                  {enabledOptionalFields.has("mau") && (
-                  <div className="space-y-2">
-                    <Label htmlFor="mau">MAU <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="mau"
-                      type="number"
-                      placeholder="0"
-                      value={formData.mau}
-                      onChange={(e) => handleInputChange("mau", e.target.value)}
-                      className={isFieldInvalid("mau") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("mau") && <p className="text-xs text-destructive">필수 항목입니다</p>}
-                  </div>
-                  )}
-
-                  {enabledOptionalFields.has("dau") && (
-                  <div className="space-y-2">
-                    <Label htmlFor="dau">DAU <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="dau"
-                      type="number"
-                      placeholder="0"
-                      value={formData.dau}
-                      onChange={(e) => handleInputChange("dau", e.target.value)}
-                      className={isFieldInvalid("dau") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("dau") && <p className="text-xs text-destructive">필수 항목입니다</p>}
-                  </div>
-                  )}
-
-                  {enabledOptionalFields.has("conversion_rate") && (
-                  <div className="space-y-2">
-                    <Label htmlFor="conversion_rate">전환율 (%) <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="conversion_rate"
-                      type="number"
-                      step="0.01"
-                      placeholder="0"
-                      value={formData.conversion_rate}
-                      onChange={(e) => handleInputChange("conversion_rate", e.target.value)}
-                      className={isFieldInvalid("conversion_rate") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("conversion_rate") && <p className="text-xs text-destructive">필수 항목입니다</p>}
-                  </div>
-                  )}
-
-                  {enabledOptionalFields.has("cac") && (
-                  <div className="space-y-2">
-                    <Label htmlFor="cac">CAC (원) <span className="text-destructive">*</span></Label>
-                    <Input
-                      id="cac"
-                      type="number"
-                      placeholder="0"
-                      value={formData.cac}
-                      onChange={(e) => handleInputChange("cac", e.target.value)}
-                      className={isFieldInvalid("cac") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("cac") && <p className="text-xs text-destructive">필수 항목입니다</p>}
-                  </div>
-                  )}
+                  {/* Optional fields */}
+                  {renderOptionalField("contract_count", "계약 수", "")}
+                  {renderOptionalField("paid_customer_count", "유료 고객 수", "")}
+                  {renderOptionalField("average_contract_value", "평균 계약 단가", "원")}
+                  {renderOptionalField("mau", "MAU", "")}
+                  {renderOptionalField("dau", "DAU", "")}
+                  {renderOptionalField("conversion_rate", "전환율", "%", "0.01")}
+                  {renderOptionalField("cac", "CAC", "원")}
+                  {renderOptionalField("arppu", "ARPPU", "원")}
+                  {renderOptionalField("mrr", "MRR", "원")}
+                  {renderOptionalField("arr", "ARR", "원")}
+                  {renderOptionalField("remaining_gov_subsidy", "잔여 정부지원금", "원")}
+                  {renderOptionalField("total_shares_issued", "총발행주식수", "주")}
+                  {renderOptionalField("latest_price_per_share", "최신 주당가격", "원")}
                 </div>
               </div>
 
