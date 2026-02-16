@@ -258,6 +258,8 @@ export type Database = {
       }
       shareholder_reports: {
         Row: {
+          arppu: number | null
+          arr: number | null
           average_contract_value: number | null
           cac: number | null
           cash_balance: number
@@ -265,25 +267,32 @@ export type Database = {
           conversion_rate: number | null
           created_at: string
           cumulative_revenue: number
+          current_status: Json | null
           dau: number | null
           employee_count_change: number
           fixed_costs: number
           id: string
           investee_id: string
+          latest_price_per_share: number | null
           mau: number | null
           monthly_revenue: number
           monthly_summary: string
+          mrr: number | null
           next_month_decisions: string
           paid_customer_count: number | null
-          problems_risks: string
+          problems_risks: Json
+          remaining_gov_subsidy: number | null
           report_period: string
           report_request_id: string | null
           runway_months: number
           shareholder_input_needed: string
+          total_shares_issued: number | null
           updated_at: string
           variable_costs: number
         }
         Insert: {
+          arppu?: number | null
+          arr?: number | null
           average_contract_value?: number | null
           cac?: number | null
           cash_balance?: number
@@ -291,25 +300,32 @@ export type Database = {
           conversion_rate?: number | null
           created_at?: string
           cumulative_revenue?: number
+          current_status?: Json | null
           dau?: number | null
           employee_count_change?: number
           fixed_costs?: number
           id?: string
           investee_id: string
+          latest_price_per_share?: number | null
           mau?: number | null
           monthly_revenue?: number
           monthly_summary: string
+          mrr?: number | null
           next_month_decisions: string
           paid_customer_count?: number | null
-          problems_risks: string
+          problems_risks: Json
+          remaining_gov_subsidy?: number | null
           report_period: string
           report_request_id?: string | null
           runway_months?: number
           shareholder_input_needed: string
+          total_shares_issued?: number | null
           updated_at?: string
           variable_costs?: number
         }
         Update: {
+          arppu?: number | null
+          arr?: number | null
           average_contract_value?: number | null
           cac?: number | null
           cash_balance?: number
@@ -317,21 +333,26 @@ export type Database = {
           conversion_rate?: number | null
           created_at?: string
           cumulative_revenue?: number
+          current_status?: Json | null
           dau?: number | null
           employee_count_change?: number
           fixed_costs?: number
           id?: string
           investee_id?: string
+          latest_price_per_share?: number | null
           mau?: number | null
           monthly_revenue?: number
           monthly_summary?: string
+          mrr?: number | null
           next_month_decisions?: string
           paid_customer_count?: number | null
-          problems_risks?: string
+          problems_risks?: Json
+          remaining_gov_subsidy?: number | null
           report_period?: string
           report_request_id?: string | null
           runway_months?: number
           shareholder_input_needed?: string
+          total_shares_issued?: number | null
           updated_at?: string
           variable_costs?: number
         }
@@ -358,31 +379,64 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_invitation_token: string }; Returns: Json }
-      submit_shareholder_report: {
-        Args: {
-          p_average_contract_value?: number
-          p_cac?: number
-          p_cash_balance: number
-          p_contract_count?: number
-          p_conversion_rate?: number
-          p_cumulative_revenue: number
-          p_dau?: number
-          p_employee_count_change: number
-          p_fixed_costs: number
-          p_mau?: number
-          p_monthly_revenue: number
-          p_monthly_summary: string
-          p_next_month_decisions: string
-          p_paid_customer_count?: number
-          p_problems_risks: string
-          p_report_period: string
-          p_request_token: string
-          p_runway_months: number
-          p_shareholder_input_needed: string
-          p_variable_costs: number
-        }
-        Returns: Json
-      }
+      submit_shareholder_report:
+        | {
+            Args: {
+              p_arppu?: number
+              p_arr?: number
+              p_average_contract_value?: number
+              p_cac?: number
+              p_cash_balance: number
+              p_contract_count?: number
+              p_conversion_rate?: number
+              p_cumulative_revenue: number
+              p_current_status?: Json
+              p_dau?: number
+              p_employee_count_change: number
+              p_fixed_costs: number
+              p_latest_price_per_share?: number
+              p_mau?: number
+              p_monthly_revenue: number
+              p_monthly_summary: string
+              p_mrr?: number
+              p_next_month_decisions: string
+              p_paid_customer_count?: number
+              p_problems_risks: Json
+              p_remaining_gov_subsidy?: number
+              p_report_period: string
+              p_request_token: string
+              p_runway_months: number
+              p_shareholder_input_needed: string
+              p_total_shares_issued?: number
+              p_variable_costs: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_average_contract_value?: number
+              p_cac?: number
+              p_cash_balance: number
+              p_contract_count?: number
+              p_conversion_rate?: number
+              p_cumulative_revenue: number
+              p_dau?: number
+              p_employee_count_change: number
+              p_fixed_costs: number
+              p_mau?: number
+              p_monthly_revenue: number
+              p_monthly_summary: string
+              p_next_month_decisions: string
+              p_paid_customer_count?: number
+              p_problems_risks: string
+              p_report_period: string
+              p_request_token: string
+              p_runway_months: number
+              p_shareholder_input_needed: string
+              p_variable_costs: number
+            }
+            Returns: Json
+          }
     }
     Enums: {
       [_ in never]: never
