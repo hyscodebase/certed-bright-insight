@@ -681,22 +681,36 @@ export default function CompanyDetail() {
             <div>
               <span className="text-sm font-medium text-muted-foreground">문제/리스크</span>
               {(() => {
-                const items = Array.isArray(latestReport.problems_risks)
-                  ? latestReport.problems_risks.map(String)
-                  : typeof latestReport.problems_risks === "string"
-                    ? (() => { try { const p = JSON.parse(latestReport.problems_risks); return Array.isArray(p) ? p.map(String) : [latestReport.problems_risks]; } catch { return [latestReport.problems_risks]; } })()
-                    : [];
-                return items.length > 0 ? (
-                  <ul className="mt-1 space-y-1">
-                    {items.map((item: string, i: number) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
-                        {item}
-                      </li>
+                let raw: any[] = [];
+                if (Array.isArray(latestReport.problems_risks)) raw = latestReport.problems_risks;
+                else if (typeof latestReport.problems_risks === "string") {
+                  try { const p = JSON.parse(latestReport.problems_risks); if (Array.isArray(p)) raw = p; else raw = [latestReport.problems_risks]; } catch { raw = [latestReport.problems_risks]; }
+                }
+                const items = raw.map((item: any) =>
+                  typeof item === "string" ? { category: "기타", content: item } : { category: item.category || "기타", content: item.content || String(item) }
+                );
+                if (items.length === 0) return <p className="mt-1 text-sm text-muted-foreground">등록된 내용이 없습니다.</p>;
+                const grouped = items.reduce<Record<string, string[]>>((acc, it) => {
+                  if (!acc[it.category]) acc[it.category] = [];
+                  acc[it.category].push(it.content);
+                  return acc;
+                }, {});
+                return (
+                  <div className="mt-1 space-y-2">
+                    {Object.entries(grouped).map(([cat, contents]) => (
+                      <div key={cat}>
+                        <span className="text-xs font-semibold text-muted-foreground">{cat}</span>
+                        <ul className="mt-0.5 space-y-1">
+                          {contents.map((c, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm">
+                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                              <span className="whitespace-pre-wrap">{c}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     ))}
-                  </ul>
-                ) : (
-                  <p className="mt-1 text-sm text-muted-foreground">등록된 내용이 없습니다.</p>
+                  </div>
                 );
               })()}
             </div>

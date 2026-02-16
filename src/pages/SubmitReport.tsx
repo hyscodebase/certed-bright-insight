@@ -8,7 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ListFieldInput } from "@/components/reports/ListFieldInput";
+import { ListFieldInput, type ListItem } from "@/components/reports/ListFieldInput";
+
+const PROBLEMS_RISKS_CATEGORIES = ["제품", "시장", "재무", "인사", "기술", "법률/규제", "기타"];
+const CURRENT_STATUS_CATEGORIES = ["제품", "시장", "재무", "인사", "기술", "기타"];
 
 interface ReportFormData {
   // Required fields
@@ -140,9 +143,8 @@ export default function SubmitReport() {
     new Set(["contract_count", "paid_customer_count", "average_contract_value", "mau", "dau", "conversion_rate", "cac"])
   );
 
-  // List-based fields
-  const [problemsRisksList, setProblemsRisksList] = useState<string[]>([]);
-  const [currentStatusList, setCurrentStatusList] = useState<string[]>([]);
+  const [problemsRisksList, setProblemsRisksList] = useState<ListItem[]>([]);
+  const [currentStatusList, setCurrentStatusList] = useState<ListItem[]>([]);
 
   useEffect(() => {
     async function validateToken() {
@@ -471,7 +473,8 @@ export default function SubmitReport() {
                     required
                     items={problemsRisksList}
                     onChange={setProblemsRisksList}
-                    placeholder="문제점이나 리스크를 입력 후 Enter"
+                    categories={PROBLEMS_RISKS_CATEGORIES}
+                    contentPlaceholder="문제점이나 리스크를 입력하세요"
                     isInvalid={showValidationErrors && problemsRisksList.length === 0}
                   />
 
@@ -481,7 +484,8 @@ export default function SubmitReport() {
                     required
                     items={currentStatusList}
                     onChange={setCurrentStatusList}
-                    placeholder="현재 상황을 입력 후 Enter"
+                    categories={CURRENT_STATUS_CATEGORIES}
+                    contentPlaceholder="현재 상황을 입력하세요"
                     isInvalid={showValidationErrors && currentStatusList.length === 0}
                   />
 
