@@ -32,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useFunds, useAllFundInvestees, useAddInvesteeToFund, useRemoveInvesteeFromFund, type Fund } from "@/hooks/useFunds";
 import { FundFormDialog } from "@/components/funds/FundFormDialog";
 import { CategorizedFieldCheckboxes } from "@/components/reports/CategorizedFieldCheckboxes";
+import { ReportFormPreviewDialog } from "@/components/reports/ReportFormPreviewDialog";
 import { FREQUENCY_OPTIONS, ALL_FIELD_KEYS, ALL_REPORT_FIELDS } from "@/constants/reportFields";
 type ReportFieldsConfig = Record<string, string[]>;
 
@@ -569,11 +570,23 @@ export default function CompanyDetail() {
             </div>
             {reportFieldsEditMode ? (
               <div className="flex items-center gap-2">
+                <ReportFormPreviewDialog
+                  enabledFields={currentFrequencyFields}
+                  companyName={company.company_name}
+                  frequencyLabel={FREQUENCY_OPTIONS.find(f => f.key === activeFrequencyTab)?.label || "월간"}
+                />
                 <Button size="sm" variant="outline" onClick={handleCancelReportFieldsEdit}>취소</Button>
                 <Button size="sm" onClick={handleSaveReportFields}>저장</Button>
               </div>
             ) : (
-              <Button size="sm" variant="outline" onClick={() => { setDraftReportFields({ ...reportFieldsConfig }); setReportFieldsEditMode(true); }}>편집</Button>
+              <div className="flex items-center gap-2">
+                <ReportFormPreviewDialog
+                  enabledFields={currentFrequencyFields}
+                  companyName={company.company_name}
+                  frequencyLabel={FREQUENCY_OPTIONS.find(f => f.key === activeFrequencyTab)?.label || "월간"}
+                />
+                <Button size="sm" variant="outline" onClick={() => { setDraftReportFields({ ...reportFieldsConfig }); setReportFieldsEditMode(true); }}>편집</Button>
+              </div>
             )}
           </div>
         </CardHeader>
