@@ -150,17 +150,17 @@ export default function SubmitReport() {
         setCompanyName(investee?.company_name || "");
         setInvesteeId(investee?.id || "");
         
-        // Determine enabled fields from request or investee config
-        const requestFields = (data as any).report_fields;
-        if (requestFields && Array.isArray(requestFields)) {
-          setEnabledOptionalFields(new Set(requestFields));
-        } else if (investee?.report_fields) {
-          const rf = investee.report_fields;
-          const freq = investee.report_frequency || "monthly";
-          if (typeof rf === "object" && !Array.isArray(rf) && rf[freq]) {
-            setEnabledOptionalFields(new Set(rf[freq]));
-          } else if (Array.isArray(rf)) {
-            setEnabledOptionalFields(new Set(rf));
+        // Determine enabled fields: prefer investee's current config, fallback to request fields
+        const freq = investee?.report_frequency || "monthly";
+        const investeeRf = investee?.report_fields;
+        if (investeeRf && typeof investeeRf === "object" && !Array.isArray(investeeRf) && investeeRf[freq]) {
+          setEnabledOptionalFields(new Set(investeeRf[freq]));
+        } else if (investeeRf && Array.isArray(investeeRf)) {
+          setEnabledOptionalFields(new Set(investeeRf));
+        } else {
+          const requestFields = (data as any).report_fields;
+          if (requestFields && Array.isArray(requestFields)) {
+            setEnabledOptionalFields(new Set(requestFields));
           }
         }
         
