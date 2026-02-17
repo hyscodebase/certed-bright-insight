@@ -275,6 +275,7 @@ export type Database = {
           investee_id: string
           latest_price_per_share: number | null
           mau: number | null
+          metrics_data: Json | null
           monthly_revenue: number
           monthly_summary: string
           mrr: number | null
@@ -308,6 +309,7 @@ export type Database = {
           investee_id: string
           latest_price_per_share?: number | null
           mau?: number | null
+          metrics_data?: Json | null
           monthly_revenue?: number
           monthly_summary: string
           mrr?: number | null
@@ -341,6 +343,7 @@ export type Database = {
           investee_id?: string
           latest_price_per_share?: number | null
           mau?: number | null
+          metrics_data?: Json | null
           monthly_revenue?: number
           monthly_summary?: string
           mrr?: number | null
@@ -379,64 +382,39 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_invitation_token: string }; Returns: Json }
-      submit_shareholder_report:
-        | {
-            Args: {
-              p_arppu?: number
-              p_arr?: number
-              p_average_contract_value?: number
-              p_cac?: number
-              p_cash_balance: number
-              p_contract_count?: number
-              p_conversion_rate?: number
-              p_cumulative_revenue: number
-              p_current_status?: Json
-              p_dau?: number
-              p_employee_count_change: number
-              p_fixed_costs: number
-              p_latest_price_per_share?: number
-              p_mau?: number
-              p_monthly_revenue: number
-              p_monthly_summary: string
-              p_mrr?: number
-              p_next_month_decisions: string
-              p_paid_customer_count?: number
-              p_problems_risks: Json
-              p_remaining_gov_subsidy?: number
-              p_report_period: string
-              p_request_token: string
-              p_runway_months: number
-              p_shareholder_input_needed: string
-              p_total_shares_issued?: number
-              p_variable_costs: number
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_average_contract_value?: number
-              p_cac?: number
-              p_cash_balance: number
-              p_contract_count?: number
-              p_conversion_rate?: number
-              p_cumulative_revenue: number
-              p_dau?: number
-              p_employee_count_change: number
-              p_fixed_costs: number
-              p_mau?: number
-              p_monthly_revenue: number
-              p_monthly_summary: string
-              p_next_month_decisions: string
-              p_paid_customer_count?: number
-              p_problems_risks: string
-              p_report_period: string
-              p_request_token: string
-              p_runway_months: number
-              p_shareholder_input_needed: string
-              p_variable_costs: number
-            }
-            Returns: Json
-          }
+      submit_shareholder_report: {
+        Args: {
+          p_arppu?: number
+          p_arr?: number
+          p_average_contract_value?: number
+          p_cac?: number
+          p_cash_balance: number
+          p_contract_count?: number
+          p_conversion_rate?: number
+          p_cumulative_revenue: number
+          p_current_status?: Json
+          p_dau?: number
+          p_employee_count_change: number
+          p_fixed_costs: number
+          p_latest_price_per_share?: number
+          p_mau?: number
+          p_metrics_data?: Json
+          p_monthly_revenue: number
+          p_monthly_summary: string
+          p_mrr?: number
+          p_next_month_decisions: string
+          p_paid_customer_count?: number
+          p_problems_risks: Json
+          p_remaining_gov_subsidy?: number
+          p_report_period: string
+          p_request_token: string
+          p_runway_months: number
+          p_shareholder_input_needed: string
+          p_total_shares_issued?: number
+          p_variable_costs: number
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

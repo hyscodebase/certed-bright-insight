@@ -31,32 +31,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useFunds, useAllFundInvestees, useAddInvesteeToFund, useRemoveInvesteeFromFund, type Fund } from "@/hooks/useFunds";
 import { FundFormDialog } from "@/components/funds/FundFormDialog";
-
-const OPTIONAL_REPORT_FIELDS = [
-  { key: "contract_count", label: "계약 수" },
-  { key: "paid_customer_count", label: "유료 고객 수" },
-  { key: "average_contract_value", label: "평균 계약 단가" },
-  { key: "mau", label: "MAU" },
-  { key: "dau", label: "DAU" },
-  { key: "conversion_rate", label: "전환율" },
-  { key: "cac", label: "CAC" },
-  { key: "arppu", label: "ARPPU" },
-  { key: "mrr", label: "MRR" },
-  { key: "arr", label: "ARR" },
-  { key: "remaining_gov_subsidy", label: "잔여 정부지원금" },
-  { key: "total_shares_issued", label: "총발행주식수" },
-  { key: "latest_price_per_share", label: "최신 주당가격" },
-] as const;
-
-const ALL_FIELD_KEYS = OPTIONAL_REPORT_FIELDS.map(f => f.key);
-
-const FREQUENCY_OPTIONS = [
-  { key: "monthly", label: "월간" },
-  { key: "quarterly", label: "분기" },
-  { key: "semi_annual", label: "반기" },
-  { key: "annual", label: "연간" },
-] as const;
-
+import { CategorizedFieldCheckboxes } from "@/components/reports/CategorizedFieldCheckboxes";
+import { FREQUENCY_OPTIONS, ALL_FIELD_KEYS, ALL_REPORT_FIELDS } from "@/constants/reportFields";
 type ReportFieldsConfig = Record<string, string[]>;
 
 function formatCurrency(amount: number | null): string {
@@ -635,32 +611,14 @@ export default function CompanyDetail() {
             ))}
           </div>
 
-          {reportFieldsEditMode ? (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-t">
-                  <TableHead className="w-[80px] whitespace-nowrap pl-6 font-medium text-foreground">포함</TableHead>
-                  <TableHead className="font-medium text-foreground">필드명</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {OPTIONAL_REPORT_FIELDS.map((field) => (
-                  <TableRow
-                    key={field.key}
-                    className={`cursor-pointer transition-colors hover:bg-muted/50 ${currentFrequencyFields.has(field.key) ? "bg-primary/5" : ""}`}
-                    onClick={() => handleToggleReportField(field.key)}
-                  >
-                    <TableCell className="pl-6" onClick={(e) => e.stopPropagation()}>
-                      <Checkbox checked={currentFrequencyFields.has(field.key)} onCheckedChange={() => handleToggleReportField(field.key)} />
-                    </TableCell>
-                    <TableCell className="font-medium">{field.label}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+           {reportFieldsEditMode ? (
+            <CategorizedFieldCheckboxes
+              selectedFields={currentFrequencyFields}
+              onToggle={handleToggleReportField}
+            />
           ) : (
             <div className="flex flex-wrap gap-2">
-              {OPTIONAL_REPORT_FIELDS.filter(f => currentFrequencyFields.has(f.key)).map((field) => (
+              {ALL_REPORT_FIELDS.filter(f => currentFrequencyFields.has(f.key)).map((field) => (
                 <Badge key={field.key} variant="secondary">{field.label}</Badge>
               ))}
               {currentFrequencyFields.size === 0 && (
