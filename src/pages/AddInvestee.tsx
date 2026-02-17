@@ -14,31 +14,8 @@ import { useFunds, useAddInvesteeToFund, type Fund } from "@/hooks/useFunds";
 import { FundFormDialog } from "@/components/funds/FundFormDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useDefaultReportFields } from "@/pages/ReportSettings";
-
-const FREQUENCY_OPTIONS = [
-  { key: "monthly", label: "월간" },
-  { key: "quarterly", label: "분기" },
-  { key: "semi_annual", label: "반기" },
-  { key: "annual", label: "연간" },
-] as const;
-
-const OPTIONAL_REPORT_FIELDS = [
-  { key: "contract_count", label: "계약 수" },
-  { key: "paid_customer_count", label: "유료 고객 수" },
-  { key: "average_contract_value", label: "평균 계약 단가" },
-  { key: "mau", label: "MAU" },
-  { key: "dau", label: "DAU" },
-  { key: "conversion_rate", label: "전환율" },
-  { key: "cac", label: "CAC" },
-  { key: "arppu", label: "ARPPU" },
-  { key: "mrr", label: "MRR" },
-  { key: "arr", label: "ARR" },
-  { key: "remaining_gov_subsidy", label: "잔여 정부지원금" },
-  { key: "total_shares_issued", label: "총발행주식수" },
-  { key: "latest_price_per_share", label: "최신 주당가격" },
-] as const;
-
-const ALL_FIELD_KEYS = OPTIONAL_REPORT_FIELDS.map(f => f.key);
+import { CategorizedFieldCheckboxes } from "@/components/reports/CategorizedFieldCheckboxes";
+import { FREQUENCY_OPTIONS, ALL_FIELD_KEYS } from "@/constants/reportFields";
 
 const STEPS = [
   { id: 1, title: "기업 정보" },
@@ -312,22 +289,10 @@ export default function AddInvestee() {
                   )}
 
                   {/* Field checkboxes */}
-                  <div className="space-y-1 rounded-lg border p-3">
-                    {OPTIONAL_REPORT_FIELDS.map((field) => (
-                      <div
-                        key={field.key}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-muted/50"
-                        onClick={() => handleToggleReportField(field.key)}
-                      >
-                        <Checkbox
-                          checked={currentFrequencyFields.has(field.key)}
-                          onCheckedChange={() => handleToggleReportField(field.key)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <span className="text-sm">{field.label}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <CategorizedFieldCheckboxes
+                    selectedFields={currentFrequencyFields}
+                    onToggle={handleToggleReportField}
+                  />
                 </div>
               )}
 
