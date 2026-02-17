@@ -314,7 +314,7 @@ export function ReportDetailDialog({ report, open, onOpenChange, companyName }: 
                           <ul className="mt-1 space-y-1">
                             {contents.map((c, i) => (
                               <li key={i} className="flex items-start gap-2 text-sm">
-                                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                                <span className="mt-1.5 text-muted-foreground">•</span>
                                 <span className="whitespace-pre-wrap">{c}</span>
                               </li>
                             ))}
