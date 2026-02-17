@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { FileText, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,104 +9,25 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ListFieldInput, type ListItem } from "@/components/reports/ListFieldInput";
+import { FIELD_DEF_MAP, REPORT_FIELD_CATEGORIES, type ReportFieldDef } from "@/lib/report-fields";
 
 const PROBLEMS_RISKS_CATEGORIES = ["제품", "시장", "재무", "인사", "기술", "법률/규제", "기타"];
 const CURRENT_STATUS_CATEGORIES = ["제품", "시장", "재무", "인사", "기술", "기타"];
 
-interface ReportFormData {
-  // Required fields
-  monthly_summary: string;
-  next_month_decisions: string;
-  shareholder_input_needed: string;
-  monthly_revenue: string;
-  fixed_costs: string;
-  variable_costs: string;
-  cash_balance: string;
-  runway_months: string;
-  employee_count_change: string;
-  // Optional fields
-  contract_count: string;
-  paid_customer_count: string;
-  average_contract_value: string;
-  mau: string;
-  dau: string;
-  conversion_rate: string;
-  cac: string;
-  arppu: string;
-  mrr: string;
-  arr: string;
-  remaining_gov_subsidy: string;
-  total_shares_issued: string;
-  latest_price_per_share: string;
-}
+// Legacy column-based fields (not stored in metrics_data)
+const LEGACY_COLUMN_FIELDS = new Set([
+  "contract_count", "paid_customer_count", "average_contract_value",
+  "mau", "dau", "conversion_rate", "cac",
+  "arppu", "mrr", "arr",
+  "remaining_gov_subsidy", "total_shares_issued", "latest_price_per_share",
+]);
 
-const initialFormData: ReportFormData = {
-  monthly_summary: "",
-  next_month_decisions: "",
-  shareholder_input_needed: "",
-  monthly_revenue: "",
-  fixed_costs: "",
-  variable_costs: "",
-  cash_balance: "",
-  runway_months: "",
-  employee_count_change: "",
-  contract_count: "",
-  paid_customer_count: "",
-  average_contract_value: "",
-  mau: "",
-  dau: "",
-  conversion_rate: "",
-  cac: "",
-  arppu: "",
-  mrr: "",
-  arr: "",
-  remaining_gov_subsidy: "",
-  total_shares_issued: "",
-  latest_price_per_share: "",
-};
+type FormData = Record<string, string>;
 
-type RequiredField = keyof ReportFormData;
-
-const OPTIONAL_FIELD_LABELS: Record<string, string> = {
-  contract_count: "계약 수",
-  paid_customer_count: "유료 고객 수",
-  average_contract_value: "평균 계약 단가",
-  mau: "MAU",
-  dau: "DAU",
-  conversion_rate: "전환율",
-  cac: "CAC",
-  arppu: "ARPPU",
-  mrr: "MRR",
-  arr: "ARR",
-  remaining_gov_subsidy: "잔여 정부지원금",
-  total_shares_issued: "총발행주식수",
-  latest_price_per_share: "최신 주당가격",
-};
-
-const getRequiredFields = (isFirstReport: boolean, enabledOptional: Set<string>): { key: RequiredField; label: string }[] => {
-  const baseFields: { key: RequiredField; label: string }[] = [
-    { key: "monthly_summary", label: "이번 달 한 줄 요약" },
-    { key: "next_month_decisions", label: "다음 달 중요한 의사결정 포인트" },
-    { key: "shareholder_input_needed", label: "주주 의견이 필요한 사안" },
-    { key: "monthly_revenue", label: "월 매출" },
-    { key: "fixed_costs", label: "고정비" },
-    { key: "variable_costs", label: "변동비" },
-    { key: "runway_months", label: "Runway" },
-    { key: "employee_count_change", label: "인원 수 변화" },
-  ];
-  
-  if (isFirstReport) {
-    baseFields.push({ key: "cash_balance", label: "현금 잔고" });
-  }
-
-  for (const fieldKey of enabledOptional) {
-    if (OPTIONAL_FIELD_LABELS[fieldKey]) {
-      baseFields.push({ key: fieldKey as RequiredField, label: OPTIONAL_FIELD_LABELS[fieldKey] });
-    }
-  }
-  
-  return baseFields;
-};
+const BASE_REQUIRED_KEYS = [
+  "monthly_summary", "next_month_decisions", "shareholder_input_needed",
+  "monthly_revenue", "fixed_costs", "variable_costs", "runway_months", "employee_count_change",
+];
 
 function formatReportPeriod(period: string): string {
   if (/^\d{4}-Q\d$/.test(period)) {
@@ -132,57 +53,40 @@ export default function SubmitReport() {
   const [status, setStatus] = useState<"loading" | "valid" | "invalid" | "expired" | "completed" | "submitting" | "success">("loading");
   const [companyName, setCompanyName] = useState("");
   const [reportPeriod, setReportPeriod] = useState("");
-  const [formData, setFormData] = useState<ReportFormData>(initialFormData);
+  const [formData, setFormData] = useState<FormData>({});
   const [investeeId, setInvesteeId] = useState<string>("");
   const [previousCumulativeRevenue, setPreviousCumulativeRevenue] = useState<number>(0);
   const [previousCashBalance, setPreviousCashBalance] = useState<number | null>(null);
   const [isFirstReport, setIsFirstReport] = useState<boolean>(true);
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
   const [showValidationErrors, setShowValidationErrors] = useState(false);
-  const [enabledOptionalFields, setEnabledOptionalFields] = useState<Set<string>>(
-    new Set(["contract_count", "paid_customer_count", "average_contract_value", "mau", "dau", "conversion_rate", "cac"])
-  );
+  const [enabledOptionalFields, setEnabledOptionalFields] = useState<Set<string>>(new Set());
 
   const [problemsRisksList, setProblemsRisksList] = useState<ListItem[]>([]);
   const [currentStatusList, setCurrentStatusList] = useState<ListItem[]>([]);
 
   useEffect(() => {
     async function validateToken() {
-      if (!token) {
-        setStatus("invalid");
-        return;
-      }
-
+      if (!token) { setStatus("invalid"); return; }
       try {
         const { data, error } = await supabase
           .from("report_requests")
-          .select(`
-            *,
-            investees (id, company_name, report_fields, report_frequency)
-          `)
+          .select(`*, investees (id, company_name, report_fields, report_frequency)`)
           .eq("request_token", token)
           .maybeSingle();
 
-        if (error || !data) {
-          setStatus("invalid");
-          return;
-        }
-
+        if (error || !data) { setStatus("invalid"); return; }
         if (data.status === "completed") {
           setStatus("completed");
           setCompanyName((data.investees as any)?.company_name || "");
           return;
         }
-
-        if (new Date(data.expires_at) < new Date()) {
-          setStatus("expired");
-          return;
-        }
+        if (new Date(data.expires_at) < new Date()) { setStatus("expired"); return; }
 
         const investee = data.investees as any;
         setCompanyName(investee?.company_name || "");
         setInvesteeId(investee?.id || "");
-        
+
         const requestFields = (data as any).report_fields;
         if (requestFields && Array.isArray(requestFields)) {
           setEnabledOptionalFields(new Set(requestFields));
@@ -195,7 +99,7 @@ export default function SubmitReport() {
             setEnabledOptionalFields(new Set(rf));
           }
         }
-        
+
         if (data.report_period) {
           setReportPeriod(data.report_period);
         } else {
@@ -210,7 +114,7 @@ export default function SubmitReport() {
             .eq("investee_id", investee.id)
             .order("report_period", { ascending: false })
             .limit(1);
-          
+
           if (reportsData && reportsData.length > 0) {
             const prevCash = reportsData[0].cash_balance || 0;
             setPreviousCumulativeRevenue(reportsData[0].cumulative_revenue || 0);
@@ -221,55 +125,67 @@ export default function SubmitReport() {
             setIsFirstReport(true);
           }
         }
-        
+
         setStatus("valid");
       } catch {
         setStatus("invalid");
       }
     }
-
     validateToken();
   }, [token]);
 
-  const handleInputChange = (field: keyof ReportFormData, value: string) => {
+  const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setTouchedFields((prev) => new Set(prev).add(field));
   };
 
-  const requiredFields = getRequiredFields(isFirstReport, enabledOptionalFields);
+  // Build required fields list including enabled optional fields
+  const requiredFields = useMemo(() => {
+    const baseFields = [
+      { key: "monthly_summary", label: "이번 달 한 줄 요약" },
+      { key: "next_month_decisions", label: "다음 달 중요한 의사결정 포인트" },
+      { key: "shareholder_input_needed", label: "주주 의견이 필요한 사안" },
+      { key: "monthly_revenue", label: "월 매출" },
+      { key: "fixed_costs", label: "고정비" },
+      { key: "variable_costs", label: "변동비" },
+      { key: "runway_months", label: "Runway" },
+      { key: "employee_count_change", label: "인원 수 변화" },
+    ];
+    if (isFirstReport) {
+      baseFields.push({ key: "cash_balance", label: "현금 잔고" });
+    }
+    for (const fieldKey of enabledOptionalFields) {
+      const def = FIELD_DEF_MAP[fieldKey];
+      if (def) {
+        baseFields.push({ key: fieldKey, label: def.label });
+      }
+    }
+    return baseFields;
+  }, [isFirstReport, enabledOptionalFields]);
 
   const getMissingRequiredFields = (): string[] => {
     const missing: string[] = [];
     for (const { key, label } of requiredFields) {
       const value = formData[key];
-      if (typeof value === "string" && !value.trim()) {
-        missing.push(label);
-      }
+      if (!value || !value.trim()) missing.push(label);
     }
-    // List fields validation
     if (problemsRisksList.length === 0) missing.push("문제/리스크");
     if (currentStatusList.length === 0) missing.push("현황");
     return missing;
   };
 
-  const isRequiredFieldsFilled = () => {
-    return getMissingRequiredFields().length === 0;
-  };
+  const isRequiredFieldsFilled = () => getMissingRequiredFields().length === 0;
 
-  const isFieldInvalid = (field: RequiredField): boolean => {
+  const isFieldInvalid = (field: string): boolean => {
     if (!showValidationErrors && !touchedFields.has(field)) return false;
     const value = formData[field];
-    if (typeof value === "string") {
-      return !value.trim();
-    }
-    return !value;
+    return !value || !value.trim();
   };
 
   const calculatedCumulativeRevenue = previousCumulativeRevenue + (parseInt(formData.monthly_revenue) || 0);
-
   const defaultCashBalance = (previousCashBalance || 0) + (parseInt(formData.monthly_revenue) || 0) - (parseInt(formData.fixed_costs) || 0) - (parseInt(formData.variable_costs) || 0);
-
   const hasTouchedCashBalance = touchedFields.has("cash_balance");
+
   useEffect(() => {
     if (!isFirstReport && !hasTouchedCashBalance) {
       setFormData(prev => ({ ...prev, cash_balance: String(defaultCashBalance) }));
@@ -294,6 +210,16 @@ export default function SubmitReport() {
     setStatus("submitting");
 
     try {
+      // Separate legacy column fields from extended fields
+      const metricsData: Record<string, number | null> = {};
+      for (const fieldKey of enabledOptionalFields) {
+        const def = FIELD_DEF_MAP[fieldKey];
+        if (def?.isExtended && formData[fieldKey]) {
+          const val = def.step === "0.01" ? parseFloat(formData[fieldKey]) : parseInt(formData[fieldKey]);
+          metricsData[fieldKey] = isNaN(val) ? null : val;
+        }
+      }
+
       const { data, error } = await supabase.rpc("submit_shareholder_report", {
         p_request_token: token!,
         p_report_period: reportPeriod,
@@ -322,24 +248,50 @@ export default function SubmitReport() {
         p_total_shares_issued: formData.total_shares_issued ? parseInt(formData.total_shares_issued) : null,
         p_latest_price_per_share: formData.latest_price_per_share ? parseInt(formData.latest_price_per_share) : null,
         p_current_status: JSON.stringify(currentStatusList),
+        p_metrics_data: JSON.stringify(metricsData),
       } as any);
 
       const result = data as { success: boolean; error?: string };
-
-      if (!result.success) {
-        throw new Error(result.error || "제출에 실패했습니다");
-      }
-
+      if (!result.success) throw new Error(result.error || "제출에 실패했습니다");
       setStatus("success");
     } catch (error: any) {
-      toast({
-        title: "제출 실패",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "제출 실패", description: error.message, variant: "destructive" });
       setStatus("valid");
     }
   };
+
+  // Render helper for optional numeric fields
+  const renderOptionalField = (fieldKey: string) => {
+    if (!enabledOptionalFields.has(fieldKey)) return null;
+    const def = FIELD_DEF_MAP[fieldKey];
+    if (!def) return null;
+    const unitLabel = def.unit ? ` (${def.unit})` : "";
+    return (
+      <div className="space-y-2" key={fieldKey}>
+        <Label htmlFor={fieldKey}>{def.label}{unitLabel} <span className="text-destructive">*</span></Label>
+        <Input
+          id={fieldKey}
+          type="number"
+          step={def.step}
+          placeholder="0"
+          value={formData[fieldKey] || ""}
+          onChange={(e) => handleInputChange(fieldKey, e.target.value)}
+          className={isFieldInvalid(fieldKey) ? "border-destructive" : ""}
+        />
+        {isFieldInvalid(fieldKey) && <p className="text-xs text-destructive">필수 항목입니다</p>}
+      </div>
+    );
+  };
+
+  // Group enabled optional fields by category for rendering
+  const enabledFieldsByCategory = useMemo(() => {
+    return REPORT_FIELD_CATEGORIES
+      .map(cat => ({
+        ...cat,
+        fields: cat.fields.filter(f => enabledOptionalFields.has(f.key)),
+      }))
+      .filter(cat => cat.fields.length > 0);
+  }, [enabledOptionalFields]);
 
   if (status === "loading") {
     return (
@@ -361,9 +313,7 @@ export default function SubmitReport() {
           <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
             <AlertCircle className="h-12 w-12 text-destructive" />
             <h2 className="text-xl font-semibold">유효하지 않은 요청입니다</h2>
-            <p className="text-muted-foreground">
-              요청 링크가 올바르지 않습니다. 이메일의 링크를 다시 확인해주세요.
-            </p>
+            <p className="text-muted-foreground">요청 링크가 올바르지 않습니다. 이메일의 링크를 다시 확인해주세요.</p>
           </CardContent>
         </Card>
       </div>
@@ -377,9 +327,7 @@ export default function SubmitReport() {
           <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
             <AlertCircle className="h-12 w-12 text-amber-500" />
             <h2 className="text-xl font-semibold">요청이 만료되었습니다</h2>
-            <p className="text-muted-foreground">
-              보고서 작성 요청이 만료되었습니다. 투자사에 새로운 요청을 요청해주세요.
-            </p>
+            <p className="text-muted-foreground">보고서 작성 요청이 만료되었습니다. 투자사에 새로운 요청을 요청해주세요.</p>
           </CardContent>
         </Card>
       </div>
@@ -396,34 +344,13 @@ export default function SubmitReport() {
               {status === "success" ? "보고서 제출 완료!" : "이미 제출된 보고서입니다"}
             </h2>
             <p className="text-muted-foreground">
-              {companyName && `${companyName}의 `}주주보고서가 정상적으로 제출되었습니다.
-              <br />
-              감사합니다.
+              {companyName && `${companyName}의 `}주주보고서가 정상적으로 제출되었습니다.<br />감사합니다.
             </p>
           </CardContent>
         </Card>
       </div>
     );
   }
-
-  const renderOptionalField = (fieldKey: string, label: string, unit: string, step?: string) => {
-    if (!enabledOptionalFields.has(fieldKey)) return null;
-    return (
-      <div className="space-y-2" key={fieldKey}>
-        <Label htmlFor={fieldKey}>{label}{unit ? ` (${unit})` : ""} <span className="text-destructive">*</span></Label>
-        <Input
-          id={fieldKey}
-          type="number"
-          step={step}
-          placeholder="0"
-          value={formData[fieldKey as keyof ReportFormData]}
-          onChange={(e) => handleInputChange(fieldKey as keyof ReportFormData, e.target.value)}
-          className={isFieldInvalid(fieldKey as RequiredField) ? "border-destructive" : ""}
-        />
-        {isFieldInvalid(fieldKey as RequiredField) && <p className="text-xs text-destructive">필수 항목입니다</p>}
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-background p-4 py-8">
@@ -444,13 +371,13 @@ export default function SubmitReport() {
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Text fields section */}
               <div className="space-y-6">
                 <h3 className="text-base font-semibold text-foreground">
-                  필수 항목 <span className="text-destructive">*</span>
+                  경영 현황 <span className="text-destructive">*</span>
                 </h3>
 
                 <div className="space-y-4">
-                  {/* Monthly Summary */}
                   <div className="space-y-2">
                     <Label htmlFor="monthly_summary">
                       이번 달 한 줄 요약 <span className="text-destructive">*</span>
@@ -458,16 +385,13 @@ export default function SubmitReport() {
                     <Textarea
                       id="monthly_summary"
                       placeholder="이번 달 주요 성과 또는 상황을 한 줄로 요약해주세요"
-                      value={formData.monthly_summary}
+                      value={formData.monthly_summary || ""}
                       onChange={(e) => handleInputChange("monthly_summary", e.target.value)}
                       className={`min-h-[80px] ${isFieldInvalid("monthly_summary") ? "border-destructive" : ""}`}
                     />
-                    {isFieldInvalid("monthly_summary") && (
-                      <p className="text-xs text-destructive">필수 항목입니다</p>
-                    )}
+                    {isFieldInvalid("monthly_summary") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
 
-                  {/* Problems/Risks - List based */}
                   <ListFieldInput
                     label="문제/리스크"
                     required
@@ -478,7 +402,6 @@ export default function SubmitReport() {
                     isInvalid={showValidationErrors && problemsRisksList.length === 0}
                   />
 
-                  {/* Current Status - List based */}
                   <ListFieldInput
                     label="현황"
                     required
@@ -496,13 +419,11 @@ export default function SubmitReport() {
                     <Textarea
                       id="next_month_decisions"
                       placeholder="다음 달에 결정해야 할 중요 사안을 작성해주세요"
-                      value={formData.next_month_decisions}
+                      value={formData.next_month_decisions || ""}
                       onChange={(e) => handleInputChange("next_month_decisions", e.target.value)}
                       className={`min-h-[80px] ${isFieldInvalid("next_month_decisions") ? "border-destructive" : ""}`}
                     />
-                    {isFieldInvalid("next_month_decisions") && (
-                      <p className="text-xs text-destructive">필수 항목입니다</p>
-                    )}
+                    {isFieldInvalid("next_month_decisions") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -512,96 +433,45 @@ export default function SubmitReport() {
                     <Textarea
                       id="shareholder_input_needed"
                       placeholder="주주들의 의견이나 조언이 필요한 사안을 작성해주세요"
-                      value={formData.shareholder_input_needed}
+                      value={formData.shareholder_input_needed || ""}
                       onChange={(e) => handleInputChange("shareholder_input_needed", e.target.value)}
                       className={`min-h-[80px] ${isFieldInvalid("shareholder_input_needed") ? "border-destructive" : ""}`}
                     />
-                    {isFieldInvalid("shareholder_input_needed") && (
-                      <p className="text-xs text-destructive">필수 항목입니다</p>
-                    )}
+                    {isFieldInvalid("shareholder_input_needed") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
                 </div>
+              </div>
 
-                {/* Financial fields */}
+              {/* Core financial fields */}
+              <div className="space-y-6">
+                <h3 className="text-base font-semibold text-foreground">
+                  기본 재무 지표 <span className="text-destructive">*</span>
+                </h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="monthly_revenue">
-                      월 매출 (원) <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="monthly_revenue"
-                      type="number"
-                      placeholder="0"
-                      value={formData.monthly_revenue}
-                      onChange={(e) => handleInputChange("monthly_revenue", e.target.value)}
-                      className={isFieldInvalid("monthly_revenue") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("monthly_revenue") && (
-                      <p className="text-xs text-destructive">필수 항목입니다</p>
-                    )}
+                    <Label htmlFor="monthly_revenue">월 매출 (원) <span className="text-destructive">*</span></Label>
+                    <Input id="monthly_revenue" type="number" placeholder="0" value={formData.monthly_revenue || ""} onChange={(e) => handleInputChange("monthly_revenue", e.target.value)} className={isFieldInvalid("monthly_revenue") ? "border-destructive" : ""} />
+                    {isFieldInvalid("monthly_revenue") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="cumulative_revenue">누적 매출 (원)</Label>
-                    <Input
-                      id="cumulative_revenue"
-                      type="number"
-                      value={calculatedCumulativeRevenue}
-                      disabled
-                      className="bg-muted"
-                    />
+                    <Input id="cumulative_revenue" type="number" value={calculatedCumulativeRevenue} disabled className="bg-muted" />
                     <p className="text-xs text-muted-foreground">자동 계산됩니다</p>
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="fixed_costs">
-                      고정비 (원) <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="fixed_costs"
-                      type="number"
-                      placeholder="0"
-                      value={formData.fixed_costs}
-                      onChange={(e) => handleInputChange("fixed_costs", e.target.value)}
-                      className={isFieldInvalid("fixed_costs") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("fixed_costs") && (
-                      <p className="text-xs text-destructive">필수 항목입니다</p>
-                    )}
+                    <Label htmlFor="fixed_costs">고정비 (원) <span className="text-destructive">*</span></Label>
+                    <Input id="fixed_costs" type="number" placeholder="0" value={formData.fixed_costs || ""} onChange={(e) => handleInputChange("fixed_costs", e.target.value)} className={isFieldInvalid("fixed_costs") ? "border-destructive" : ""} />
+                    {isFieldInvalid("fixed_costs") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="variable_costs">
-                      변동비 (원) <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="variable_costs"
-                      type="number"
-                      placeholder="0"
-                      value={formData.variable_costs}
-                      onChange={(e) => handleInputChange("variable_costs", e.target.value)}
-                      className={isFieldInvalid("variable_costs") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("variable_costs") && (
-                      <p className="text-xs text-destructive">필수 항목입니다</p>
-                    )}
+                    <Label htmlFor="variable_costs">변동비 (원) <span className="text-destructive">*</span></Label>
+                    <Input id="variable_costs" type="number" placeholder="0" value={formData.variable_costs || ""} onChange={(e) => handleInputChange("variable_costs", e.target.value)} className={isFieldInvalid("variable_costs") ? "border-destructive" : ""} />
+                    {isFieldInvalid("variable_costs") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="cash_balance">
-                      현금 잔고 (원) {isFirstReport && <span className="text-destructive">*</span>}
-                    </Label>
-                    <Input
-                      id="cash_balance"
-                      type="number"
-                      placeholder="0"
-                      value={formData.cash_balance}
-                      onChange={(e) => handleInputChange("cash_balance", e.target.value)}
-                      className={isFieldInvalid("cash_balance") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("cash_balance") && (
-                      <p className="text-xs text-destructive">필수 항목입니다</p>
-                    )}
+                    <Label htmlFor="cash_balance">현금 잔고 (원) {isFirstReport && <span className="text-destructive">*</span>}</Label>
+                    <Input id="cash_balance" type="number" placeholder="0" value={formData.cash_balance || ""} onChange={(e) => handleInputChange("cash_balance", e.target.value)} className={isFieldInvalid("cash_balance") ? "border-destructive" : ""} />
+                    {isFieldInvalid("cash_balance") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                     {isFirstReport ? (
                       <p className="text-xs text-muted-foreground">첫 보고서에서는 직접 입력해주세요</p>
                     ) : (
@@ -610,57 +480,34 @@ export default function SubmitReport() {
                       </p>
                     )}
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="runway_months">
-                      Runway (개월) <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="runway_months"
-                      type="number"
-                      placeholder="0"
-                      value={formData.runway_months}
-                      onChange={(e) => handleInputChange("runway_months", e.target.value)}
-                      className={isFieldInvalid("runway_months") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("runway_months") && (
-                      <p className="text-xs text-destructive">필수 항목입니다</p>
-                    )}
+                    <Label htmlFor="runway_months">Runway (개월) <span className="text-destructive">*</span></Label>
+                    <Input id="runway_months" type="number" placeholder="0" value={formData.runway_months || ""} onChange={(e) => handleInputChange("runway_months", e.target.value)} className={isFieldInvalid("runway_months") ? "border-destructive" : ""} />
+                    {isFieldInvalid("runway_months") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="employee_count_change">
-                      인원 수 변화 <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="employee_count_change"
-                      type="number"
-                      placeholder="0 (증가: +, 감소: -)"
-                      value={formData.employee_count_change}
-                      onChange={(e) => handleInputChange("employee_count_change", e.target.value)}
-                      className={isFieldInvalid("employee_count_change") ? "border-destructive" : ""}
-                    />
-                    {isFieldInvalid("employee_count_change") && (
-                      <p className="text-xs text-destructive">필수 항목입니다</p>
-                    )}
+                    <Label htmlFor="employee_count_change">인원 수 변화 <span className="text-destructive">*</span></Label>
+                    <Input id="employee_count_change" type="number" placeholder="0 (증가: +, 감소: -)" value={formData.employee_count_change || ""} onChange={(e) => handleInputChange("employee_count_change", e.target.value)} className={isFieldInvalid("employee_count_change") ? "border-destructive" : ""} />
+                    {isFieldInvalid("employee_count_change") && <p className="text-xs text-destructive">필수 항목입니다</p>}
                   </div>
-
-                  {/* Optional fields */}
-                  {renderOptionalField("contract_count", "계약 수", "")}
-                  {renderOptionalField("paid_customer_count", "유료 고객 수", "")}
-                  {renderOptionalField("average_contract_value", "평균 계약 단가", "원")}
-                  {renderOptionalField("mau", "MAU", "")}
-                  {renderOptionalField("dau", "DAU", "")}
-                  {renderOptionalField("conversion_rate", "전환율", "%", "0.01")}
-                  {renderOptionalField("cac", "CAC", "원")}
-                  {renderOptionalField("arppu", "ARPPU", "원")}
-                  {renderOptionalField("mrr", "MRR", "원")}
-                  {renderOptionalField("arr", "ARR", "원")}
-                  {renderOptionalField("remaining_gov_subsidy", "잔여 정부지원금", "원")}
-                  {renderOptionalField("total_shares_issued", "총발행주식수", "주")}
-                  {renderOptionalField("latest_price_per_share", "최신 주당가격", "원")}
                 </div>
               </div>
+
+              {/* Optional fields by category */}
+              {enabledFieldsByCategory.length > 0 && (
+                <div className="space-y-6">
+                  {enabledFieldsByCategory.map(cat => (
+                    <div key={cat.key} className="space-y-4">
+                      <h3 className="text-base font-semibold text-foreground">
+                        {cat.label} <span className="text-destructive">*</span>
+                      </h3>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {cat.fields.map(f => renderOptionalField(f.key))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <Button
                 type="submit"

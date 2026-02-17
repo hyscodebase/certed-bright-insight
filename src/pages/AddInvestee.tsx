@@ -14,39 +14,14 @@ import { useFunds, useAddInvesteeToFund, type Fund } from "@/hooks/useFunds";
 import { FundFormDialog } from "@/components/funds/FundFormDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useDefaultReportFields } from "@/pages/ReportSettings";
-
-const FREQUENCY_OPTIONS = [
-  { key: "monthly", label: "월간" },
-  { key: "quarterly", label: "분기" },
-  { key: "semi_annual", label: "반기" },
-  { key: "annual", label: "연간" },
-] as const;
-
-const OPTIONAL_REPORT_FIELDS = [
-  { key: "contract_count", label: "계약 수" },
-  { key: "paid_customer_count", label: "유료 고객 수" },
-  { key: "average_contract_value", label: "평균 계약 단가" },
-  { key: "mau", label: "MAU" },
-  { key: "dau", label: "DAU" },
-  { key: "conversion_rate", label: "전환율" },
-  { key: "cac", label: "CAC" },
-  { key: "arppu", label: "ARPPU" },
-  { key: "mrr", label: "MRR" },
-  { key: "arr", label: "ARR" },
-  { key: "remaining_gov_subsidy", label: "잔여 정부지원금" },
-  { key: "total_shares_issued", label: "총발행주식수" },
-  { key: "latest_price_per_share", label: "최신 주당가격" },
-] as const;
-
-const ALL_FIELD_KEYS = OPTIONAL_REPORT_FIELDS.map(f => f.key);
+import { CategorizedFieldSelector } from "@/components/reports/CategorizedFieldSelector";
+import { FREQUENCY_OPTIONS, ALL_FIELD_KEYS, type ReportFieldsConfig } from "@/lib/report-fields";
 
 const STEPS = [
   { id: 1, title: "기업 정보" },
   { id: 2, title: "보고 설정" },
   { id: 3, title: "펀드 배정" },
 ];
-
-type ReportFieldsConfig = Record<string, string[]>;
 
 export default function AddInvestee() {
   const navigate = useNavigate();
@@ -64,12 +39,10 @@ export default function AddInvestee() {
   const addInvesteeToFund = useAddInvesteeToFund();
   const { data: defaultReportFields } = useDefaultReportFields();
 
-  // Report fields config: initialized from user defaults
   const [reportFieldsConfig, setReportFieldsConfig] = useState<ReportFieldsConfig | null>(null);
   const [defaultsApplied, setDefaultsApplied] = useState(false);
   const [selectedFrequencyTab, setSelectedFrequencyTab] = useState("monthly");
 
-  // Apply defaults once loaded
   if (defaultReportFields && !defaultsApplied) {
     setReportFieldsConfig(defaultReportFields);
     setDefaultsApplied(true);
@@ -110,11 +83,8 @@ export default function AddInvestee() {
 
   const handleToggleReportField = useCallback((fieldKey: string) => {
     const currentFields = new Set(activeReportFieldsConfig[activeFrequencyTab] ?? []);
-    if (currentFields.has(fieldKey)) {
-      currentFields.delete(fieldKey);
-    } else {
-      currentFields.add(fieldKey);
-    }
+    if (currentFields.has(fieldKey)) currentFields.delete(fieldKey);
+    else currentFields.add(fieldKey);
     setReportFieldsConfig({ ...activeReportFieldsConfig, [activeFrequencyTab]: Array.from(currentFields) });
   }, [activeReportFieldsConfig, activeFrequencyTab]);
 
@@ -141,7 +111,6 @@ export default function AddInvestee() {
     if (step > 1) setStep(step - 1);
   };
 
-  // Determine primary report_frequency from enabled frequencies
   const primaryFrequency = useMemo(() => {
     const order = ["monthly", "quarterly", "semi_annual", "annual"];
     return order.find(f => enabledFrequencies.has(f)) || "monthly";
@@ -261,7 +230,6 @@ export default function AddInvestee() {
           {/* Step 2: 보고 설정 */}
           {step === 2 && (
             <div className="space-y-6">
-              {/* Frequency multi-select */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">보고 주기 선택</Label>
                 <p className="text-xs text-muted-foreground">
@@ -288,11 +256,9 @@ export default function AddInvestee() {
                 </div>
               </div>
 
-              {/* Per-frequency field config */}
               {enabledFrequencies.size > 0 && (
                 <div className="space-y-3">
                   <Label className="text-sm font-medium">선택 항목 설정</Label>
-                  {/* Frequency tabs */}
                   {enabledFrequencies.size > 1 && (
                     <div className="flex gap-1 rounded-lg border p-1">
                       {FREQUENCY_OPTIONS.filter(f => enabledFrequencies.has(f.key)).map((freq) => (
@@ -311,27 +277,15 @@ export default function AddInvestee() {
                     </div>
                   )}
 
-                  {/* Field checkboxes */}
-                  <div className="space-y-1 rounded-lg border p-3">
-                    {OPTIONAL_REPORT_FIELDS.map((field) => (
-                      <div
-                        key={field.key}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-muted/50"
-                        onClick={() => handleToggleReportField(field.key)}
-                      >
-                        <Checkbox
-                          checked={currentFrequencyFields.has(field.key)}
-                          onCheckedChange={() => handleToggleReportField(field.key)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <span className="text-sm">{field.label}</span>
-                      </div>
-                    ))}
+                  <div className="rounded-lg border p-3">
+                    <CategorizedFieldSelector
+                      enabledFields={currentFrequencyFields}
+                      onToggle={handleToggleReportField}
+                    />
                   </div>
                 </div>
               )}
 
-              {/* Summary of step 1 */}
               <div className="rounded-lg border border-border bg-muted/30 p-4">
                 <p className="mb-2 text-xs font-medium text-muted-foreground">입력된 기업 정보</p>
                 <div className="space-y-1 text-sm">
@@ -425,22 +379,13 @@ export default function AddInvestee() {
             )}
 
             {step < totalSteps ? (
-              <Button
-                onClick={handleNext}
-                disabled={step === 1 && !isStep1Valid}
-                className="gap-2"
-              >
+              <Button onClick={handleNext} disabled={step === 1 && !isStep1Valid} className="gap-2">
                 다음
                 <ChevronRight className="h-4 w-4" />
               </Button>
             ) : (
-              <Button
-                onClick={handleSubmit}
-                disabled={!isStep1Valid || createInvestee.isPending}
-                className="gap-2"
-              >
+              <Button onClick={handleSubmit} disabled={createInvestee.isPending} className="gap-2">
                 {createInvestee.isPending ? "추가 중..." : "피투자사 추가"}
-                <Check className="h-4 w-4" />
               </Button>
             )}
           </div>
@@ -451,11 +396,6 @@ export default function AddInvestee() {
         open={fundFormOpen}
         onOpenChange={setFundFormOpen}
         editingFund={editingFund}
-        onSuccess={(fund) => {
-          if (!editingFund && fund?.id) {
-            setSelectedFundIds((prev) => [...prev, fund.id]);
-          }
-        }}
       />
     </DashboardLayout>
   );
