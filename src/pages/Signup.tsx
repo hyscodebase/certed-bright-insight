@@ -137,12 +137,12 @@ export default function Signup() {
 
               <div className="space-y-2">
                 <Label htmlFor="companyName" className="text-sm font-medium">
-                  회사명 <span className="text-primary">*</span>
+                  투자사명 <span className="text-primary">*</span>
                 </Label>
                 <Input
                   id="companyName"
                   type="text"
-                  placeholder="회사명을 입력하세요"
+                  placeholder="투자사명을 입력하세요"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   required

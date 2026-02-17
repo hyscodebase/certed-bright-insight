@@ -17,6 +17,7 @@ import FundDetail from "./pages/FundDetail";
 import AcceptInvitation from "./pages/AcceptInvitation";
 import SubmitReport from "./pages/SubmitReport";
 import ReportSettings from "./pages/ReportSettings";
+import CompleteProfile from "./pages/CompleteProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -97,6 +98,14 @@ const App = () => (
             />
             <Route path="/accept-invitation" element={<AcceptInvitation />} />
             <Route path="/submit-report" element={<SubmitReport />} />
+            <Route
+              path="/complete-profile"
+              element={
+                <ProtectedRoute>
+                  <CompleteProfile />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
