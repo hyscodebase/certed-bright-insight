@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,11 +13,6 @@ export default function CompleteProfile() {
   const { toast } = useToast();
   const [companyName, setCompanyName] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/login", { replace: true });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,16 +79,6 @@ export default function CompleteProfile() {
                 className="h-12 w-full rounded-lg bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 {loading ? "저장 중..." : "시작하기"}
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleLogout}
-                className="h-10 w-full text-muted-foreground hover:text-foreground"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                다른 계정으로 로그인
               </Button>
             </form>
           </div>
