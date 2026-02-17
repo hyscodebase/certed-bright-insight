@@ -40,6 +40,12 @@ const OPTIONAL_REPORT_FIELDS = [
   { key: "dau", label: "DAU" },
   { key: "conversion_rate", label: "전환율" },
   { key: "cac", label: "CAC" },
+  { key: "arppu", label: "ARPPU" },
+  { key: "mrr", label: "MRR" },
+  { key: "arr", label: "ARR" },
+  { key: "remaining_gov_subsidy", label: "잔여 정부지원금" },
+  { key: "total_shares_issued", label: "총발행주식수" },
+  { key: "latest_price_per_share", label: "최신 주당가격" },
 ] as const;
 
 const ALL_FIELD_KEYS = OPTIONAL_REPORT_FIELDS.map(f => f.key);
