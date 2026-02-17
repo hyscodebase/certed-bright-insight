@@ -230,9 +230,26 @@ export default function InvesteeList() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {FREQUENCY_LABELS[company.report_frequency] || "월간"}
-                      </Badge>
+                      <div className="flex flex-wrap gap-1">
+                        {(() => {
+                          const rf = (company as any).report_fields;
+                          if (rf && typeof rf === "object" && !Array.isArray(rf)) {
+                            const keys = Object.keys(rf);
+                            if (keys.length > 0) {
+                              return keys.map(k => (
+                                <Badge key={k} variant="outline" className="text-xs">
+                                  {FREQUENCY_LABELS[k] || k}
+                                </Badge>
+                              ));
+                            }
+                          }
+                          return (
+                            <Badge variant="outline" className="text-xs">
+                              {FREQUENCY_LABELS[company.report_frequency] || "월간"}
+                            </Badge>
+                          );
+                        })()}
+                      </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(company.id)}</TableCell>
                     <TableCell>

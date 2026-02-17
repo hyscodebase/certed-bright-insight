@@ -33,7 +33,7 @@ import { useFunds, useAllFundInvestees, useAddInvesteeToFund, useRemoveInvesteeF
 import { FundFormDialog } from "@/components/funds/FundFormDialog";
 import { CategorizedFieldCheckboxes } from "@/components/reports/CategorizedFieldCheckboxes";
 import { ReportFormPreviewDialog } from "@/components/reports/ReportFormPreviewDialog";
-import { FREQUENCY_OPTIONS, ALL_FIELD_KEYS, ALL_REPORT_FIELDS } from "@/constants/reportFields";
+import { FREQUENCY_OPTIONS, ALL_FIELD_KEYS, ALL_REPORT_FIELDS, REPORT_FIELD_CATEGORIES } from "@/constants/reportFields";
 type ReportFieldsConfig = Record<string, string[]>;
 
 function formatCurrency(amount: number | null): string {
@@ -640,13 +640,23 @@ export default function CompanyDetail() {
               onBulkToggle={handleBulkToggleReportField}
             />
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {ALL_REPORT_FIELDS.filter(f => currentFrequencyFields.has(f.key)).map((field) => (
-                <Badge key={field.key} variant="secondary">{field.label}</Badge>
-              ))}
-              {currentFrequencyFields.size === 0 && (
-                <p className="text-sm text-muted-foreground">선택된 항목이 없습니다.</p>
-              )}
+            <div className="space-y-2">
+              {(() => {
+                const selected = ALL_REPORT_FIELDS.filter(f => currentFrequencyFields.has(f.key));
+                if (selected.length === 0) return <p className="text-sm text-muted-foreground">선택된 항목이 없습니다.</p>;
+                // Group by category
+                const grouped: { category: string; labels: string[] }[] = [];
+                for (const cat of REPORT_FIELD_CATEGORIES) {
+                  const labels = cat.fields.filter(f => currentFrequencyFields.has(f.key)).map(f => f.label);
+                  if (labels.length > 0) grouped.push({ category: cat.category, labels });
+                }
+                return grouped.map(g => (
+                  <div key={g.category}>
+                    <span className="text-xs font-medium text-muted-foreground">{g.category}</span>
+                    <span className="ml-2 text-sm">{g.labels.join(", ")}</span>
+                  </div>
+                ));
+              })()}
             </div>
           )}
         </CardContent>
@@ -690,7 +700,7 @@ export default function CompanyDetail() {
                         <ul className="mt-0.5 space-y-1">
                           {contents.map((c, i) => (
                             <li key={i} className="flex items-start gap-2 text-sm">
-                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
+                              <span className="mt-1.5 text-muted-foreground">•</span>
                               <span className="whitespace-pre-wrap">{c}</span>
                             </li>
                           ))}
