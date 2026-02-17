@@ -1,4 +1,4 @@
-import { ChevronLeft, Users, DollarSign, FileText, TrendingUp, BarChart3 } from "lucide-react";
+import { ChevronLeft, Users, DollarSign, FileText, TrendingUp } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { ShareholderReport } from "@/hooks/useShareholderReports";
-import { REPORT_FIELD_CATEGORIES, FIELD_DEF_MAP } from "@/lib/report-fields";
+
 interface ReportDetailDialogProps {
   report: ShareholderReport | null;
   open: boolean;
@@ -265,43 +265,6 @@ export function ReportDetailDialog({ report, open, onOpenChange, companyName }: 
               </CardContent>
             </Card>
           )}
-
-          {/* Extended Metrics from metrics_data */}
-          {(() => {
-            const metricsData = (report as any).metrics_data as Record<string, number> | null;
-            if (!metricsData || typeof metricsData !== "object") return null;
-            const filledCategories = REPORT_FIELD_CATEGORIES
-              .map(cat => ({
-                ...cat,
-                fields: cat.fields.filter(f => f.isExtended && metricsData[f.key] != null),
-              }))
-              .filter(cat => cat.fields.length > 0);
-            if (filledCategories.length === 0) return null;
-            return filledCategories.map(cat => (
-              <Card key={cat.key} className="border-border">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-muted-foreground" />
-                    <CardTitle className="text-base font-semibold">{cat.label}</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {cat.fields.map(f => {
-                      const val = metricsData[f.key];
-                      const displayVal = f.unit === "%" ? `${val}%` : f.unit === "주" ? `${val?.toLocaleString()}주` : f.unit === "명" ? `${val?.toLocaleString()}명` : formatCurrencyShort(val);
-                      return (
-                        <div key={f.key} className="rounded-lg bg-muted/50 p-4">
-                          <span className="text-sm text-muted-foreground">{f.label}</span>
-                          <p className="mt-1 text-xl font-bold text-primary">{displayVal}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            ));
-          })()}
 
           {/* Monthly Key Issues */}
           <Card className="border-border">
