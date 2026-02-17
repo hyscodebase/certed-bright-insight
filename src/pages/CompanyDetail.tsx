@@ -699,8 +699,7 @@ export default function CompanyDetail() {
                         <span className="text-xs font-semibold text-muted-foreground">{cat}</span>
                         <ul className="mt-0.5 space-y-1">
                           {contents.map((c, i) => (
-                            <li key={i} className="flex items-start gap-2 text-sm">
-                              <span className="mt-1.5 text-muted-foreground">•</span>
+                            <li key={i} className="text-sm">
                               <span className="whitespace-pre-wrap">{c}</span>
                             </li>
                           ))}
