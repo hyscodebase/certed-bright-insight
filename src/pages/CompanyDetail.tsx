@@ -167,6 +167,15 @@ export default function CompanyDetail() {
     });
   }, [activeReportFieldsConfig, activeFrequencyTab]);
 
+  const handleBulkToggleReportField = useCallback((fieldKeys: string[], selected: boolean) => {
+    const currentFields = new Set(activeReportFieldsConfig[activeFrequencyTab] ?? ALL_FIELD_KEYS);
+    fieldKeys.forEach(k => selected ? currentFields.add(k) : currentFields.delete(k));
+    setDraftReportFields({
+      ...activeReportFieldsConfig,
+      [activeFrequencyTab]: Array.from(currentFields),
+    });
+  }, [activeReportFieldsConfig, activeFrequencyTab]);
+
   const handleSaveReportFields = () => {
     if (draftReportFields) {
       updateReportFields.mutate(draftReportFields);
@@ -612,9 +621,10 @@ export default function CompanyDetail() {
           </div>
 
            {reportFieldsEditMode ? (
-            <CategorizedFieldCheckboxes
+             <CategorizedFieldCheckboxes
               selectedFields={currentFrequencyFields}
               onToggle={handleToggleReportField}
+              onBulkToggle={handleBulkToggleReportField}
             />
           ) : (
             <div className="flex flex-wrap gap-2">

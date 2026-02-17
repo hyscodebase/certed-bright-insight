@@ -7,9 +7,10 @@ import { REPORT_FIELD_CATEGORIES } from "@/constants/reportFields";
 interface CategorizedFieldCheckboxesProps {
   selectedFields: Set<string>;
   onToggle: (fieldKey: string) => void;
+  onBulkToggle?: (fieldKeys: string[], selected: boolean) => void;
 }
 
-export function CategorizedFieldCheckboxes({ selectedFields, onToggle }: CategorizedFieldCheckboxesProps) {
+export function CategorizedFieldCheckboxes({ selectedFields, onToggle, onBulkToggle }: CategorizedFieldCheckboxesProps) {
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set());
 
   const toggleOpen = (category: string) => {
@@ -38,10 +39,15 @@ export function CategorizedFieldCheckboxes({ selectedFields, onToggle }: Categor
               <Checkbox
                 checked={allSelected ? true : someSelected ? "indeterminate" : false}
                 onCheckedChange={() => {
-                  if (allSelected) {
-                    cat.fields.forEach(f => { if (selectedFields.has(f.key)) onToggle(f.key); });
+                  const keys = cat.fields.map(f => f.key);
+                  if (onBulkToggle) {
+                    onBulkToggle(keys, !allSelected);
                   } else {
-                    cat.fields.forEach(f => { if (!selectedFields.has(f.key)) onToggle(f.key); });
+                    if (allSelected) {
+                      cat.fields.forEach(f => { if (selectedFields.has(f.key)) onToggle(f.key); });
+                    } else {
+                      cat.fields.forEach(f => { if (!selectedFields.has(f.key)) onToggle(f.key); });
+                    }
                   }
                 }}
                 onClick={(e) => e.stopPropagation()}
