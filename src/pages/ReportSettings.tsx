@@ -86,6 +86,12 @@ export default function ReportSettings() {
     setDraft({ ...activeConfig, [activeTab]: Array.from(fields) });
   }, [activeConfig, activeTab]);
 
+  const handleBulkToggleField = useCallback((fieldKeys: string[], selected: boolean) => {
+    const fields = new Set(activeConfig[activeTab] ?? []);
+    fieldKeys.forEach(k => selected ? fields.add(k) : fields.delete(k));
+    setDraft({ ...activeConfig, [activeTab]: Array.from(fields) });
+  }, [activeConfig, activeTab]);
+
   const saveMutation = useMutation({
     mutationFn: async (config: ReportFieldsConfig) => {
       const { data: user } = await supabase.auth.getUser();
@@ -188,6 +194,7 @@ export default function ReportSettings() {
               <CategorizedFieldCheckboxes
                 selectedFields={currentFields}
                 onToggle={handleToggleField}
+                onBulkToggle={handleBulkToggleField}
               />
             </div>
           )}

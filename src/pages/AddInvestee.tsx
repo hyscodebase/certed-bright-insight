@@ -95,6 +95,12 @@ export default function AddInvestee() {
     setReportFieldsConfig({ ...activeReportFieldsConfig, [activeFrequencyTab]: Array.from(currentFields) });
   }, [activeReportFieldsConfig, activeFrequencyTab]);
 
+  const handleBulkToggleReportField = useCallback((fieldKeys: string[], selected: boolean) => {
+    const currentFields = new Set(activeReportFieldsConfig[activeFrequencyTab] ?? []);
+    fieldKeys.forEach(k => selected ? currentFields.add(k) : currentFields.delete(k));
+    setReportFieldsConfig({ ...activeReportFieldsConfig, [activeFrequencyTab]: Array.from(currentFields) });
+  }, [activeReportFieldsConfig, activeFrequencyTab]);
+
   const isStep1Valid = companyName.trim() && email.trim();
   const totalSteps = funds && funds.length > 0 ? 3 : 2;
 
@@ -292,6 +298,7 @@ export default function AddInvestee() {
                   <CategorizedFieldCheckboxes
                     selectedFields={currentFrequencyFields}
                     onToggle={handleToggleReportField}
+                    onBulkToggle={handleBulkToggleReportField}
                   />
                 </div>
               )}
