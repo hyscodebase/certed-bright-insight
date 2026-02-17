@@ -15,6 +15,7 @@ import { FundFormDialog } from "@/components/funds/FundFormDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useDefaultReportFields } from "@/pages/ReportSettings";
 import { CategorizedFieldCheckboxes } from "@/components/reports/CategorizedFieldCheckboxes";
+import { ReportFormPreviewDialog } from "@/components/reports/ReportFormPreviewDialog";
 import { FREQUENCY_OPTIONS, ALL_FIELD_KEYS } from "@/constants/reportFields";
 
 const STEPS = [
@@ -274,7 +275,14 @@ export default function AddInvestee() {
               {/* Per-frequency field config */}
               {enabledFrequencies.size > 0 && (
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">선택 항목 설정</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">선택 항목 설정</Label>
+                    <ReportFormPreviewDialog
+                      enabledFields={currentFrequencyFields}
+                      companyName={companyName || "피투자사"}
+                      frequencyLabel={FREQUENCY_OPTIONS.find(f => f.key === activeFrequencyTab)?.label || "월간"}
+                    />
+                  </div>
                   {/* Frequency tabs */}
                   {enabledFrequencies.size > 1 && (
                     <div className="flex gap-1 rounded-lg border p-1">

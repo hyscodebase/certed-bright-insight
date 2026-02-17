@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CategorizedFieldCheckboxes } from "@/components/reports/CategorizedFieldCheckboxes";
+import { ReportFormPreviewDialog } from "@/components/reports/ReportFormPreviewDialog";
 import { FREQUENCY_OPTIONS, ALL_FIELD_KEYS, type ReportFieldsConfig } from "@/constants/reportFields";
 
 const DEFAULT_CONFIG: ReportFieldsConfig = {
@@ -173,7 +174,13 @@ export default function ReportSettings() {
           {/* Per-frequency fields */}
           {enabledFrequencies.size > 0 && (
             <div className="space-y-3">
-              <Label className="text-sm font-medium">선택 항목 설정</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">선택 항목 설정</Label>
+                <ReportFormPreviewDialog
+                  enabledFields={currentFields}
+                  frequencyLabel={FREQUENCY_OPTIONS.find(f => f.key === activeTab)?.label || "월간"}
+                />
+              </div>
               {enabledFrequencies.size > 1 && (
                 <div className="flex gap-1 rounded-lg border p-1">
                   {FREQUENCY_OPTIONS.filter(f => enabledFrequencies.has(f.key)).map((freq) => (
