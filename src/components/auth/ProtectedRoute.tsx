@@ -33,12 +33,13 @@ export function ProtectedRoute({ children, allowedRole }: ProtectedRouteProps) {
       supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle(),
+        .eq("user_id", user.id),
     ]).then(([profileResult, roleResult]) => {
       setHasCompanyName(!!profileResult.data?.company_name);
       setProfileChecked(true);
-      setUserRole(roleResult.data?.role || null);
+      // Pick the first role found
+      const roles = roleResult.data || [];
+      setUserRole(roles.length > 0 ? roles[0].role : null);
       setRoleChecked(true);
     });
   }, [user]);
