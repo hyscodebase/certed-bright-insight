@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { LogOut, Building2, TrendingUp, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +38,7 @@ export default function CompleteProfile() {
     } else {
       // Check user metadata
       const metaRole = user?.user_metadata?.role as "investor" | "investee" | undefined;
-      setRole(metaRole || "investor");
+      setRole(metaRole || null);
     }
   }, [user]);
 
@@ -138,11 +138,49 @@ export default function CompleteProfile() {
 
           <div className="rounded-2xl bg-card p-8">
             {!role ? (
-              <p className="text-center text-muted-foreground">로딩 중...</p>
+              <>
+                <h2 className="mb-2 text-center text-2xl font-medium text-foreground">가입 유형 선택</h2>
+                <p className="mb-8 text-center text-sm text-muted-foreground">가입 유형을 선택해주세요</p>
+                <div className="space-y-4">
+                  <button
+                    onClick={() => setRole("investor")}
+                    className="w-full rounded-xl border-2 border-border p-6 text-left hover:border-primary hover:bg-primary/5 transition-all group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                        <TrendingUp className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground">투자사</h3>
+                        <p className="text-sm text-muted-foreground">피투자사를 관리하고 보고서를 수집합니다</p>
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setRole("investee")}
+                    className="w-full rounded-xl border-2 border-border p-6 text-left hover:border-primary hover:bg-primary/5 transition-all group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                        <Building2 className="h-6 w-6 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-foreground">피투자사</h3>
+                        <p className="text-sm text-muted-foreground">투자사에게 주주보고서를 제출합니다</p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </>
             ) : role === "investor" ? (
               <>
-                <h2 className="mb-2 text-center text-2xl font-medium text-foreground">투자사명 입력</h2>
-                <p className="mb-8 text-center text-sm text-muted-foreground">서비스 이용을 위해 투자사명을 입력해주세요.</p>
+                <div className="mb-6 flex items-center gap-2">
+                  <button onClick={() => setRole(null)} className="text-muted-foreground hover:text-foreground">
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <h2 className="text-xl font-medium text-foreground">투자사명 입력</h2>
+                </div>
+                <p className="mb-8 text-sm text-muted-foreground">서비스 이용을 위해 투자사명을 입력해주세요.</p>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
                     <Label htmlFor="companyName">투자사명 <span className="text-primary">*</span></Label>
@@ -155,8 +193,13 @@ export default function CompleteProfile() {
               </>
             ) : (
               <>
-                <h2 className="mb-2 text-center text-2xl font-medium text-foreground">회사 정보 입력</h2>
-                <p className="mb-8 text-center text-sm text-muted-foreground">피투자사 정보를 입력해주세요.</p>
+                <div className="mb-6 flex items-center gap-2">
+                  <button onClick={() => setRole(null)} className="text-muted-foreground hover:text-foreground">
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <h2 className="text-xl font-medium text-foreground">회사 정보 입력</h2>
+                </div>
+                <p className="mb-8 text-sm text-muted-foreground">피투자사 정보를 입력해주세요.</p>
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <Label htmlFor="investeeCompanyName">회사명 <span className="text-primary">*</span></Label>
