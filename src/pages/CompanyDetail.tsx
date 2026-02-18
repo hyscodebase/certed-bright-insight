@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { Building2, TrendingUp, DollarSign, RefreshCw, FileText, Send, Loader2, Briefcase, Plus, Pencil, Trash2 } from "lucide-react";
+import { Building2, TrendingUp, DollarSign, RefreshCw, FileText, Send, Loader2, Briefcase, Plus, Pencil, Trash2, ChevronRight } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -640,24 +641,29 @@ export default function CompanyDetail() {
               onBulkToggle={handleBulkToggleReportField}
             />
           ) : (
-            <div className="space-y-2">
-              {(() => {
-                const selected = ALL_REPORT_FIELDS.filter(f => currentFrequencyFields.has(f.key));
-                if (selected.length === 0) return <p className="text-sm text-muted-foreground">선택된 항목이 없습니다.</p>;
-                // Group by category
-                const grouped: { category: string; labels: string[] }[] = [];
-                for (const cat of REPORT_FIELD_CATEGORIES) {
-                  const labels = cat.fields.filter(f => currentFrequencyFields.has(f.key)).map(f => f.label);
-                  if (labels.length > 0) grouped.push({ category: cat.category, labels });
-                }
-                return grouped.map(g => (
-                  <div key={g.category}>
-                    <span className="text-xs font-medium text-muted-foreground">{g.category}</span>
-                    <span className="ml-2 text-sm">{g.labels.join(", ")}</span>
-                  </div>
-                ));
-              })()}
-            </div>
+            <div className="space-y-1">
+               {(() => {
+                 const selected = ALL_REPORT_FIELDS.filter(f => currentFrequencyFields.has(f.key));
+                 if (selected.length === 0) return <p className="text-sm text-muted-foreground">선택된 항목이 없습니다.</p>;
+                 const grouped: { category: string; labels: string[] }[] = [];
+                 for (const cat of REPORT_FIELD_CATEGORIES) {
+                   const labels = cat.fields.filter(f => currentFrequencyFields.has(f.key)).map(f => f.label);
+                   if (labels.length > 0) grouped.push({ category: cat.category, labels });
+                 }
+                 return grouped.map(g => (
+                   <Collapsible key={g.category}>
+                     <CollapsibleTrigger className="flex w-full items-center gap-1 py-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors [&[data-state=open]>svg]:rotate-90">
+                       <ChevronRight className="h-3.5 w-3.5 transition-transform" />
+                       {g.category}
+                       <span className="ml-1 text-xs font-normal">({g.labels.length})</span>
+                     </CollapsibleTrigger>
+                     <CollapsibleContent className="pl-5 pb-1">
+                       <p className="text-sm">{g.labels.join(", ")}</p>
+                     </CollapsibleContent>
+                   </Collapsible>
+                 ));
+               })()}
+             </div>
           )}
         </CardContent>
       </Card>
