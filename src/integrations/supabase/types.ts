@@ -174,6 +174,7 @@ export type Database = {
           hire_count: number | null
           id: string
           industry: string | null
+          investee_user_id: string | null
           investment_stage: string | null
           is_smb: boolean | null
           report_fields: Json
@@ -196,6 +197,7 @@ export type Database = {
           hire_count?: number | null
           id?: string
           industry?: string | null
+          investee_user_id?: string | null
           investment_stage?: string | null
           is_smb?: boolean | null
           report_fields?: Json
@@ -218,6 +220,7 @@ export type Database = {
           hire_count?: number | null
           id?: string
           industry?: string | null
+          investee_user_id?: string | null
           investment_stage?: string | null
           is_smb?: boolean | null
           report_fields?: Json

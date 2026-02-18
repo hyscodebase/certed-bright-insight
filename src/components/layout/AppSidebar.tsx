@@ -1,4 +1,4 @@
-import { Home, Building2, List, Briefcase, User, LogOut, Menu, X, Settings2 } from "lucide-react";
+import { Home, Building2, List, Briefcase, User, LogOut, Menu, Settings2, FileText } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,9 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 
-const menuItems = [
+const investorMenuItems = [
   { title: "홈", url: "/", icon: Home },
   { title: "피투자사 추가", url: "/add-investee", icon: Building2 },
   { title: "피투자사 목록", url: "/investees", icon: List },
@@ -16,19 +17,24 @@ const menuItems = [
   { title: "프로필", url: "/profile", icon: User },
 ];
 
+const investeeMenuItems = [
+  { title: "홈", url: "/investee", icon: Home },
+  { title: "보고서", url: "/investee", icon: FileText },
+  { title: "프로필", url: "/profile", icon: User },
+];
+
 function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { role } = useUserRole();
+
+  const menuItems = role === "investee" ? investeeMenuItems : investorMenuItems;
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      toast({
-        title: "로그아웃 실패",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "로그아웃 실패", description: error.message, variant: "destructive" });
     } else {
       navigate("/login");
     }
@@ -70,7 +76,7 @@ function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
 
         {/* Logout */}
         <div className="mt-4">
-          <button 
+          <button
             onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
@@ -89,9 +95,7 @@ function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
           <p>상호명 | 주식회사 지디피스튜디오</p>
           <p>대표자 | 이유</p>
           <p>사업자 등록번호 | 146-87-02284</p>
-          <p className="leading-relaxed">
-            주소 | 경기도 성남시 대왕판교로 625번길 13 경기창조혁신센터 8층
-          </p>
+          <p className="leading-relaxed">주소 | 경기도 성남시 대왕판교로 625번길 13 경기창조혁신센터 8층</p>
           <p>이메일 | help@certifie.io</p>
           <p>전화번호 | 010-6212-0225</p>
           <p className="mt-2">© 2026 GDP Studio Inc. All rights reserved.</p>
@@ -117,11 +121,7 @@ export function MobileSidebar() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden"
-        >
+        <Button variant="ghost" size="icon" className="md:hidden">
           <Menu className="h-6 w-6" />
           <span className="sr-only">메뉴 열기</span>
         </Button>
