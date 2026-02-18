@@ -234,9 +234,9 @@ export default function InvesteeList() {
                         {(() => {
                           const rf = (company as any).report_fields;
                           if (rf && typeof rf === "object" && !Array.isArray(rf)) {
-                            const keys = Object.keys(rf);
-                            if (keys.length > 0) {
-                              return keys.map(k => (
+                          const orderedKeys = ["monthly", "quarterly", "semi_annual", "annual"].filter(k => k in rf);
+                            if (orderedKeys.length > 0) {
+                              return orderedKeys.map(k => (
                                 <Badge key={k} variant="outline" className="text-xs">
                                   {FREQUENCY_LABELS[k] || k}
                                 </Badge>
