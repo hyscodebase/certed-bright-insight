@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -118,6 +119,21 @@ export default function CompleteProfile() {
             <h1 className="text-4xl font-bold text-foreground">
               Certed<span className="text-primary">+</span>
             </h1>
+          </div>
+
+          <div className="mb-4 flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                await supabase.auth.signOut();
+                navigate("/login", { replace: true });
+              }}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="mr-1 h-4 w-4" />
+              로그아웃
+            </Button>
           </div>
 
           <div className="rounded-2xl bg-card p-8">
