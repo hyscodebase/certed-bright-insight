@@ -113,6 +113,54 @@ export type Database = {
         }
         Relationships: []
       }
+      investee_profiles: {
+        Row: {
+          address: string | null
+          business_registration_number: string | null
+          capital: number | null
+          company_name: string
+          contact_email: string | null
+          created_at: string
+          employee_count: number | null
+          established_date: string | null
+          id: string
+          industry: string | null
+          representative: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          business_registration_number?: string | null
+          capital?: number | null
+          company_name: string
+          contact_email?: string | null
+          created_at?: string
+          employee_count?: number | null
+          established_date?: string | null
+          id?: string
+          industry?: string | null
+          representative?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          business_registration_number?: string | null
+          capital?: number | null
+          company_name?: string
+          contact_email?: string | null
+          created_at?: string
+          employee_count?: number | null
+          established_date?: string | null
+          id?: string
+          industry?: string | null
+          representative?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       investees: {
         Row: {
           address: string | null
@@ -376,12 +424,40 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       accept_invitation: { Args: { p_invitation_token: string }; Returns: Json }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       submit_shareholder_report: {
         Args: {
           p_arppu?: number
@@ -417,7 +493,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "investor" | "investee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -544,6 +620,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["investor", "investee"],
+    },
   },
 } as const
