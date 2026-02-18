@@ -18,15 +18,24 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Get the intended destination or default to "/"
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/";
-
   useEffect(() => {
-    // If user is already logged in, redirect to intended destination
     if (!authLoading && user) {
-      navigate(from, { replace: true });
+      // Check user role and redirect accordingly
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.role === "investee") {
+            navigate("/investee", { replace: true });
+          } else {
+            const from = (location.state as { from?: { pathname: string } })?.from?.pathname || "/";
+            navigate(from, { replace: true });
+          }
+        });
     }
-  }, [user, authLoading, navigate, from]);
+  }, [user, authLoading, navigate, location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
