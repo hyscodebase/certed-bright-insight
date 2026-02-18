@@ -48,13 +48,15 @@ export default function CompleteProfile() {
     setLoading(true);
 
     try {
-      // Assign role if not already assigned
-      const { error: roleError } = await supabase.from("user_roles").upsert(
-        { user_id: user.id, role },
-        { onConflict: "user_id,role" }
+      // Remove any existing roles for this user first (clean slate)
+      await supabase.from("user_roles").delete().eq("user_id", user.id);
+      
+      // Insert the chosen role
+      const { error: roleError } = await supabase.from("user_roles").insert(
+        { user_id: user.id, role }
       );
       if (roleError) {
-        console.warn("Role upsert warning:", roleError.message);
+        console.warn("Role insert warning:", roleError.message);
       }
 
       // Ensure profile exists (upsert)
