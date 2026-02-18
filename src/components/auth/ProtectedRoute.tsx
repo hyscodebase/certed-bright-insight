@@ -35,7 +35,8 @@ export function ProtectedRoute({ children, allowedRole }: ProtectedRouteProps) {
         .select("role")
         .eq("user_id", user.id),
     ]).then(([profileResult, roleResult]) => {
-      setHasCompanyName(!!profileResult.data?.company_name);
+      const profileData = profileResult.data;
+      setHasCompanyName(!!profileData?.company_name);
       setProfileChecked(true);
       // Pick the first role found
       const roles = roleResult.data || [];

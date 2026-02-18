@@ -48,18 +48,23 @@ export default function CompleteProfile() {
 
     try {
       // Assign role if not already assigned
-      await supabase.from("user_roles").upsert(
+      const { error: roleError } = await supabase.from("user_roles").upsert(
         { user_id: user.id, role },
         { onConflict: "user_id,role" }
       );
+      if (roleError) {
+        console.warn("Role upsert warning:", roleError.message);
+      }
 
-      if (role === "investor") {
-        // Update profiles table
-        await supabase
-          .from("profiles")
-          .update({ company_name: companyName.trim() })
-          .eq("user_id", user.id);
-      } else {
+      // Ensure profile exists (upsert)
+      const targetCompanyName = role === "investor" ? companyName.trim() : investeeCompanyName.trim();
+      const displayName = user.user_metadata?.full_name || user.user_metadata?.name || "";
+      await supabase.from("profiles").upsert(
+        { user_id: user.id, company_name: targetCompanyName, display_name: displayName },
+        { onConflict: "user_id" }
+      );
+
+      if (role !== "investor") {
         // Create investee profile
         const { error: profileError } = await supabase
           .from("investee_profiles")
@@ -78,11 +83,6 @@ export default function CompleteProfile() {
 
         if (profileError) throw profileError;
 
-        // Also update profiles table with company name
-        await supabase
-          .from("profiles")
-          .update({ company_name: investeeCompanyName.trim() })
-          .eq("user_id", user.id);
 
         // Auto-link any existing investee records
         await supabase
