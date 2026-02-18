@@ -94,7 +94,13 @@ export default function CompleteProfile() {
 
       localStorage.removeItem("signup_role");
       toast({ title: "프로필이 저장되었습니다." });
-      navigate("/", { replace: true });
+      
+      // Navigate to the correct dashboard based on role
+      if (role === "investee") {
+        navigate("/investee", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
     } catch (error: any) {
       toast({ title: "저장 실패", description: error.message, variant: "destructive" });
     }
