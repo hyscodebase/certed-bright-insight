@@ -37,12 +37,14 @@ export default function CompleteProfile() {
     Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
       supabase.from("profiles").select("company_name").eq("user_id", user.id).maybeSingle(),
-    ]).then(([roleResult, profileResult]) => {
+      supabase.from("investee_profiles").select("company_name").eq("user_id", user.id).maybeSingle(),
+    ]).then(([roleResult, profileResult, investeeProfileResult]) => {
       const dbRole = roleResult.data?.role as "investor" | "investee" | undefined;
       const hasCompany = !!profileResult.data?.company_name;
+      const hasInvesteeProfile = !!investeeProfileResult.data?.company_name;
 
       // If user already has role + profile, redirect to dashboard
-      if (dbRole && hasCompany) {
+      if (dbRole && (hasCompany || hasInvesteeProfile)) {
         if (dbRole === "investee") {
           navigate("/investee", { replace: true });
         } else {
