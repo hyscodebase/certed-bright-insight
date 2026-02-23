@@ -31,16 +31,40 @@ export default function CompleteProfile() {
   const [address, setAddress] = useState("");
 
   useEffect(() => {
-    // Check localStorage first (Google signup flow)
-    const storedRole = localStorage.getItem("signup_role") as "investor" | "investee" | null;
-    if (storedRole) {
-      setRole(storedRole);
-    } else {
-      // Check user metadata
-      const metaRole = user?.user_metadata?.role as "investor" | "investee" | undefined;
-      setRole(metaRole || null);
-    }
-  }, [user]);
+    if (!user) return;
+
+    // First check if user already has a role and profile in DB
+    Promise.all([
+      supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
+      supabase.from("profiles").select("company_name").eq("user_id", user.id).maybeSingle(),
+    ]).then(([roleResult, profileResult]) => {
+      const dbRole = roleResult.data?.role as "investor" | "investee" | undefined;
+      const hasCompany = !!profileResult.data?.company_name;
+
+      // If user already has role + profile, redirect to dashboard
+      if (dbRole && hasCompany) {
+        if (dbRole === "investee") {
+          navigate("/investee", { replace: true });
+        } else {
+          navigate("/", { replace: true });
+        }
+        return;
+      }
+
+      // Otherwise determine role from localStorage or metadata
+      if (dbRole) {
+        setRole(dbRole);
+      } else {
+        const storedRole = localStorage.getItem("signup_role") as "investor" | "investee" | null;
+        if (storedRole) {
+          setRole(storedRole);
+        } else {
+          const metaRole = user?.user_metadata?.role as "investor" | "investee" | undefined;
+          setRole(metaRole || null);
+        }
+      }
+    });
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
