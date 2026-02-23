@@ -13,6 +13,7 @@ export default function CompleteProfile() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true);
 
   // Determine role from localStorage (set during Google signup) or user metadata
   const [role, setRole] = useState<"investor" | "investee" | null>(null);
@@ -31,9 +32,11 @@ export default function CompleteProfile() {
   const [address, setAddress] = useState("");
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setInitializing(false);
+      return;
+    }
 
-    // First check if user already has a role and profile in DB
     Promise.all([
       supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle(),
       supabase.from("profiles").select("company_name").eq("user_id", user.id).maybeSingle(),
@@ -43,7 +46,6 @@ export default function CompleteProfile() {
       const hasCompany = !!profileResult.data?.company_name;
       const hasInvesteeProfile = !!investeeProfileResult.data?.company_name;
 
-      // If user already has role + profile, redirect to dashboard
       if (dbRole && (hasCompany || hasInvesteeProfile)) {
         if (dbRole === "investee") {
           navigate("/investee", { replace: true });
@@ -53,7 +55,6 @@ export default function CompleteProfile() {
         return;
       }
 
-      // Otherwise determine role from localStorage or metadata
       if (dbRole) {
         setRole(dbRole);
       } else {
@@ -65,6 +66,7 @@ export default function CompleteProfile() {
           setRole(metaRole || null);
         }
       }
+      setInitializing(false);
     });
   }, [user, navigate]);
 
@@ -138,6 +140,19 @@ export default function CompleteProfile() {
   };
 
   const inputClass = "h-12 rounded-lg border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-primary";
+
+  if (initializing) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-foreground">
+            Certed<span className="text-primary">+</span>
+          </h1>
+          <p className="mt-4 text-sm text-muted-foreground">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
