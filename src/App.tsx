@@ -20,6 +20,7 @@ import ReportSettings from "./pages/ReportSettings";
 import CompleteProfile from "./pages/CompleteProfile";
 import InvesteeDashboard from "./pages/InvesteeDashboard";
 import InvesteeSubmitReport from "./pages/InvesteeSubmitReport";
+import InvestorConnect from "./pages/InvestorConnect";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
 
             {/* Investee routes */}
             <Route path="/investee" element={<ProtectedRoute allowedRole="investee"><InvesteeDashboard /></ProtectedRoute>} />
+            <Route path="/investee/connect" element={<ProtectedRoute allowedRole="investee"><InvestorConnect /></ProtectedRoute>} />
             <Route path="/investee/submit-report/:requestId" element={<ProtectedRoute allowedRole="investee"><InvesteeSubmitReport /></ProtectedRoute>} />
 
             {/* Public routes */}
