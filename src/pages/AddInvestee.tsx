@@ -17,6 +17,7 @@ import { useDefaultReportFields } from "@/pages/ReportSettings";
 import { CategorizedFieldCheckboxes } from "@/components/reports/CategorizedFieldCheckboxes";
 import { ReportFormPreviewDialog } from "@/components/reports/ReportFormPreviewDialog";
 import { FREQUENCY_OPTIONS, ALL_FIELD_KEYS } from "@/constants/reportFields";
+import { EmailVerification } from "@/components/invitations/EmailVerification";
 
 const STEPS = [
   { id: 1, title: "기업 정보" },
@@ -33,6 +34,7 @@ export default function AddInvestee() {
   const [companyName, setCompanyName] = useState("");
   const [representative, setRepresentative] = useState("");
   const [email, setEmail] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
   const [selectedFundIds, setSelectedFundIds] = useState<string[]>([]);
   const [fundSearch, setFundSearch] = useState("");
   const [fundFormOpen, setFundFormOpen] = useState(false);
@@ -102,7 +104,7 @@ export default function AddInvestee() {
     setReportFieldsConfig({ ...activeReportFieldsConfig, [activeFrequencyTab]: Array.from(currentFields) });
   }, [activeReportFieldsConfig, activeFrequencyTab]);
 
-  const isStep1Valid = companyName.trim() && email.trim();
+  const isStep1Valid = companyName.trim() && email.trim() && emailVerified;
   const totalSteps = funds && funds.length > 0 ? 3 : 2;
 
   const toggleFund = (fundId: string) => {
@@ -235,10 +237,17 @@ export default function AddInvestee() {
                   type="email"
                   placeholder="피투자사의 담당자 이메일 주소를 입력해주세요."
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setEmailVerified(false); }}
                   className="h-11 rounded-lg"
                 />
               </div>
+
+              {email.trim() && (
+                <EmailVerification
+                  email={email}
+                  onVerified={() => setEmailVerified(true)}
+                />
+              )}
             </div>
           )}
 

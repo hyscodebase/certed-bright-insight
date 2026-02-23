@@ -1,4 +1,4 @@
-import { Home, Building2, List, Briefcase, User, LogOut, Menu, Settings2, FileText } from "lucide-react";
+import { Home, Building2, List, Briefcase, User, LogOut, Menu, Settings2, FileText, LinkIcon } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ const investorMenuItems = [
 
 const investeeMenuItems = [
   { title: "홈", url: "/investee", icon: Home },
+  { title: "투자사 연동", url: "/investee/connect", icon: LinkIcon },
   { title: "보고서", url: "/investee", icon: FileText },
   { title: "프로필", url: "/profile", icon: User },
 ];
