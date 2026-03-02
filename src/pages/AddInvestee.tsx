@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useCreateInvestee } from "@/hooks/useInvestees";
 import { useFunds, useAddInvesteeToFund, type Fund } from "@/hooks/useFunds";
 import { FundFormDialog } from "@/components/funds/FundFormDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -40,7 +39,7 @@ export default function AddInvestee() {
   const [fundSearch, setFundSearch] = useState("");
   const [fundFormOpen, setFundFormOpen] = useState(false);
   const [editingFund, setEditingFund] = useState<Fund | null>(null);
-  const createInvestee = useCreateInvestee();
+  const [submitting, setSubmitting] = useState(false);
   const { data: funds } = useFunds();
   const addInvesteeToFund = useAddInvesteeToFund();
   const { data: defaultReportFields } = useDefaultReportFields();
@@ -135,59 +134,67 @@ export default function AddInvestee() {
   }, [enabledFrequencies]);
 
   const handleSubmit = async () => {
-    createInvestee.mutate(
-      {
+    setSubmitting(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("로그인이 필요합니다");
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("company_name")
+        .eq("user_id", userData.user.id)
+        .maybeSingle();
+
+      const invitationToken = crypto.randomUUID();
+
+      // Create invitation record (NOT investee — investee is created on acceptance)
+      const { error: invError } = await supabase.from("investee_invitations").insert({
+        user_id: userData.user.id,
         company_name: companyName,
         contact_email: email,
+        invitation_token: invitationToken,
         representative: representative.trim() || null,
         report_frequency: primaryFrequency,
         report_fields: activeReportFieldsConfig,
-      },
-      {
-        onSuccess: async (result) => {
-          if (selectedFundIds.length > 0 && result?.id) {
-            await Promise.all(
-              selectedFundIds.map((fundId) =>
-                addInvesteeToFund.mutateAsync({ fund_id: fundId, investee_id: result.id })
-              )
-            );
-          }
+        fund_ids: selectedFundIds,
+      });
 
-          // Send invitation email to the investee
-          try {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("company_name")
-              .eq("user_id", (await supabase.auth.getUser()).data.user!.id)
-              .maybeSingle();
+      if (invError) throw invError;
 
-            const invitationToken = crypto.randomUUID();
-
-            // Create invitation record
-            await supabase.from("investee_invitations").insert({
-              user_id: (await supabase.auth.getUser()).data.user!.id,
-              company_name: companyName,
-              contact_email: email,
-              invitation_token: invitationToken,
-            });
-
-            // Send email
-            await supabase.functions.invoke("send-invitation-email", {
-              body: {
-                company_name: companyName,
-                contact_email: email,
-                invitation_token: invitationToken,
-                investor_company_name: profile?.company_name || "투자사",
-              },
-            });
-          } catch (err) {
-            console.error("Failed to send invitation email:", err);
-          }
-
-          navigate("/investees");
+      // Send invitation email
+      const { error: emailError } = await supabase.functions.invoke("send-invitation-email", {
+        body: {
+          company_name: companyName,
+          contact_email: email,
+          invitation_token: invitationToken,
+          investor_company_name: profile?.company_name || "투자사",
         },
+      });
+
+      if (emailError) {
+        console.error("Email send error:", emailError);
+        toast({
+          title: "초대가 생성되었으나 메일 발송에 실패했습니다",
+          description: "피투자사가 초대 링크를 통해 수락할 수 있습니다.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "초대 메일 발송 완료",
+          description: `${email}로 초대 메일이 발송되었습니다. 수락 시 피투자사로 추가됩니다.`,
+        });
       }
-    );
+
+      navigate("/investees");
+    } catch (error: any) {
+      toast({
+        title: "초대 실패",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const activeSteps = STEPS.slice(0, totalSteps);
@@ -454,10 +461,10 @@ export default function AddInvestee() {
             ) : (
               <Button
                 onClick={handleSubmit}
-                disabled={!isStep1Valid || createInvestee.isPending}
+                disabled={!isStep1Valid || submitting}
                 className="gap-2"
               >
-                {createInvestee.isPending ? "추가 중..." : "피투자사 추가"}
+                {submitting ? "초대 발송 중..." : "초대 메일 발송"}
                 <Check className="h-4 w-4" />
               </Button>
             )}

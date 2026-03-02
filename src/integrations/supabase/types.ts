@@ -156,8 +156,12 @@ export type Database = {
           contact_email: string
           created_at: string
           expires_at: string
+          fund_ids: Json | null
           id: string
           invitation_token: string
+          report_fields: Json
+          report_frequency: string
+          representative: string | null
           status: string
           user_id: string
         }
@@ -167,8 +171,12 @@ export type Database = {
           contact_email: string
           created_at?: string
           expires_at?: string
+          fund_ids?: Json | null
           id?: string
           invitation_token: string
+          report_fields?: Json
+          report_frequency?: string
+          representative?: string | null
           status?: string
           user_id: string
         }
@@ -178,8 +186,12 @@ export type Database = {
           contact_email?: string
           created_at?: string
           expires_at?: string
+          fund_ids?: Json | null
           id?: string
           invitation_token?: string
+          report_fields?: Json
+          report_frequency?: string
+          representative?: string | null
           status?: string
           user_id?: string
         }
