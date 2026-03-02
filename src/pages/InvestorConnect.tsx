@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { TrendingUp, Search, Mail, Loader2, CheckCircle2, X, LinkIcon } from "lucide-react";
+import { TrendingUp, Mail, Loader2, CheckCircle2, X, LinkIcon } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { EmailVerification } from "@/components/invitations/EmailVerification";
 
 interface ConnectionRequest {
   id: string;
@@ -24,7 +23,6 @@ export default function InvestorConnect() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
-  const [emailVerified, setEmailVerified] = useState(false);
   const [sending, setSending] = useState(false);
   const [sentRequests, setSentRequests] = useState<ConnectionRequest[]>([]);
   const [receivedRequests, setReceivedRequests] = useState<ConnectionRequest[]>([]);
@@ -60,10 +58,19 @@ export default function InvestorConnect() {
   };
 
   const handleSendInvite = async () => {
-    if (!user || !email.trim() || !emailVerified) return;
+    if (!user || !email.trim()) return;
     setSending(true);
 
     try {
+      // Get my company name
+      const { data: profile } = await supabase
+        .from("investee_profiles")
+        .select("company_name")
+        .eq("user_id", user.id)
+        .single();
+
+      const myCompanyName = profile?.company_name || "피투자사";
+
       const { error } = await supabase
         .from("connection_requests")
         .insert({
@@ -74,19 +81,19 @@ export default function InvestorConnect() {
 
       if (error) throw error;
 
-      // Also send notification email
+      // Send invitation email to the investor
       await supabase.functions.invoke("send-invitation-email", {
         body: {
-          company_name: "투자사",
+          company_name: myCompanyName,
           contact_email: email.trim(),
           invitation_token: crypto.randomUUID(),
-          investor_company_name: "피투자사",
+          investor_company_name: myCompanyName,
+          direction: "investee_to_investor",
         },
       });
 
-      toast({ title: "연동 요청이 발송되었습니다." });
+      toast({ title: "초대 메일이 발송되었습니다.", description: "상대방이 수락하면 연동됩니다." });
       setEmail("");
-      setEmailVerified(false);
       fetchRequests();
     } catch (error: any) {
       toast({ title: "요청 실패", description: error.message, variant: "destructive" });
@@ -146,33 +153,24 @@ export default function InvestorConnect() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              투자사의 이메일 주소를 입력하여 연동을 요청하세요. 이메일 인증 후 초대가 발송됩니다.
+              투자사 담당자의 이메일 주소를 입력하면 초대 메일이 발송됩니다. 상대방이 수락하면 연동됩니다.
             </p>
             <div className="space-y-2">
-              <Label htmlFor="investorEmail">투자사 이메일</Label>
+              <Label htmlFor="investorEmail">투자사 담당자 이메일</Label>
               <Input
                 id="investorEmail"
                 type="email"
-                placeholder="투자사 담당자 이메일을 입력하세요"
+                placeholder="상대 투자사 담당자의 이메일을 입력하세요"
                 value={email}
-                onChange={(e) => { setEmail(e.target.value); setEmailVerified(false); }}
+                onChange={(e) => setEmail(e.target.value)}
                 className="h-11"
               />
             </div>
-            
-            {email.trim() && !emailVerified && (
-              <EmailVerification
-                email={email}
-                onVerified={() => setEmailVerified(true)}
-              />
-            )}
 
-            {emailVerified && (
-              <Button onClick={handleSendInvite} disabled={sending} className="w-full gap-2">
-                {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                {sending ? "발송 중..." : "연동 요청 보내기"}
-              </Button>
-            )}
+            <Button onClick={handleSendInvite} disabled={sending || !email.trim()} className="w-full gap-2">
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+              {sending ? "발송 중..." : "초대 메일 보내기"}
+            </Button>
           </CardContent>
         </Card>
 
