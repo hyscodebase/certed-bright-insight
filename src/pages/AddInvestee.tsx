@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Building2, ChevronRight, ChevronLeft, Check, Search, Plus, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -151,6 +152,38 @@ export default function AddInvestee() {
               )
             );
           }
+
+          // Send invitation email to the investee
+          try {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("company_name")
+              .eq("user_id", (await supabase.auth.getUser()).data.user!.id)
+              .maybeSingle();
+
+            const invitationToken = crypto.randomUUID();
+
+            // Create invitation record
+            await supabase.from("investee_invitations").insert({
+              user_id: (await supabase.auth.getUser()).data.user!.id,
+              company_name: companyName,
+              contact_email: email,
+              invitation_token: invitationToken,
+            });
+
+            // Send email
+            await supabase.functions.invoke("send-invitation-email", {
+              body: {
+                company_name: companyName,
+                contact_email: email,
+                invitation_token: invitationToken,
+                investor_company_name: profile?.company_name || "투자사",
+              },
+            });
+          } catch (err) {
+            console.error("Failed to send invitation email:", err);
+          }
+
           navigate("/investees");
         },
       }
