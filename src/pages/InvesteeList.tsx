@@ -1,4 +1,4 @@
-import { List, Plus, Send, Loader2, Pencil, Trash2, ChevronRight } from "lucide-react";
+import { List, Plus, Send, Loader2, Pencil, Trash2, ChevronRight, Clock, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -86,6 +86,23 @@ export default function InvesteeList() {
   });
 
   const investorCompanyName = investorProfile?.company_name || "투자사";
+
+  // Fetch pending invitations
+  const { data: pendingInvitations } = useQuery({
+    queryKey: ["pending-invitations"],
+    queryFn: async () => {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return [];
+      const { data, error } = await supabase
+        .from("investee_invitations")
+        .select("*")
+        .eq("user_id", user.user.id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const filteredInvestees = useMemo(() => {
     if (!investees) return [];
@@ -216,100 +233,132 @@ export default function InvesteeList() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : filteredInvestees.length > 0 ? (
-                filteredInvestees.map((company) => (
-                  <TableRow
-                    key={company.id}
-                    className="cursor-pointer transition-colors hover:bg-muted/50"
-                    onClick={() => navigate(`/company/${company.id}`)}
-                  >
-                    <TableCell className="pl-6 font-medium">{company.company_name}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {getFundBadges(company.id) || <span className="text-xs text-muted-foreground">-</span>}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {(() => {
-                          const rf = (company as any).report_fields;
-                          if (rf && typeof rf === "object" && !Array.isArray(rf)) {
-                          const orderedKeys = ["monthly", "quarterly", "semi_annual", "annual"].filter(k => k in rf);
-                            if (orderedKeys.length > 0) {
-                              return orderedKeys.map(k => (
-                                <Badge key={k} variant="outline" className="text-xs">
-                                  {FREQUENCY_LABELS[k] || k}
-                                </Badge>
-                              ));
+              ) : filteredInvestees.length > 0 || (pendingInvitations && pendingInvitations.length > 0) ? (
+                <>
+                  {/* Pending invitations */}
+                  {pendingInvitations?.map((inv) => (
+                    <TableRow key={`inv-${inv.id}`} className="bg-muted/20">
+                      <TableCell className="pl-6">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium text-muted-foreground">{inv.company_name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-muted-foreground">-</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-muted-foreground">-</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="gap-1 border-amber-300 bg-amber-50 text-amber-700">
+                          <Clock className="h-3 w-3" />
+                          수락 대기 중
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-muted-foreground">{inv.contact_email}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-xs text-muted-foreground">-</span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {/* Confirmed investees */}
+                  {filteredInvestees.map((company) => (
+                    <TableRow
+                      key={company.id}
+                      className="cursor-pointer transition-colors hover:bg-muted/50"
+                      onClick={() => navigate(`/company/${company.id}`)}
+                    >
+                      <TableCell className="pl-6 font-medium">{company.company_name}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {getFundBadges(company.id) || <span className="text-xs text-muted-foreground">-</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {(() => {
+                            const rf = (company as any).report_fields;
+                            if (rf && typeof rf === "object" && !Array.isArray(rf)) {
+                            const orderedKeys = ["monthly", "quarterly", "semi_annual", "annual"].filter(k => k in rf);
+                              if (orderedKeys.length > 0) {
+                                return orderedKeys.map(k => (
+                                  <Badge key={k} variant="outline" className="text-xs">
+                                    {FREQUENCY_LABELS[k] || k}
+                                  </Badge>
+                                ));
+                              }
                             }
+                            return (
+                              <Badge variant="outline" className="text-xs">
+                                {FREQUENCY_LABELS[company.report_frequency] || "월간"}
+                              </Badge>
+                            );
+                          })()}
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(company.id)}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5"
+                          disabled={sendingId === company.id}
+                          onClick={(e) =>
+                            handleOpenRequestDialog(e, company.id, company.company_name, company.contact_email, (company as any).report_fields)
                           }
-                          return (
-                            <Badge variant="outline" className="text-xs">
-                              {FREQUENCY_LABELS[company.report_frequency] || "월간"}
-                            </Badge>
-                          );
-                        })()}
-                      </div>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(company.id)}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1.5"
-                        disabled={sendingId === company.id}
-                        onClick={(e) =>
-                          handleOpenRequestDialog(e, company.id, company.company_name, company.contact_email, (company as any).report_fields)
-                        }
-                      >
-                        {sendingId === company.id ? (
-                          <>
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            발송중
-                          </>
-                        ) : (
-                          <>
-                            <Send className="h-3.5 w-3.5" />
-                            요청
-                          </>
-                        )}
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingInvestee({
-                              id: company.id,
-                              company_name: company.company_name,
-                              representative: company.representative,
-                              contact_email: company.contact_email,
-                            });
-                            setEditFormOpen(true);
-                          }}
                         >
-                          <Pencil className="h-3.5 w-3.5" />
+                          {sendingId === company.id ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              발송중
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-3.5 w-3.5" />
+                              요청
+                            </>
+                          )}
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteTarget({ id: company.id, name: company.company_name });
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingInvestee({
+                                id: company.id,
+                                company_name: company.company_name,
+                                representative: company.representative,
+                                contact_email: company.contact_email,
+                              });
+                              setEditFormOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget({ id: company.id, name: company.company_name });
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </>
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
